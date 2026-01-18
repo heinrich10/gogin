@@ -20,7 +20,11 @@ Sample API server built with Go and Gin framework.
    ```
 4. Set up your database and run migrations
     ```bash
-    docker run --rm -it --network=host -v "$(pwd):/db" -e DATABASE_URL=sqlite://gogin.db ghcr.io/amacneil/dbmate up
+    docker run --rm -it --network=host -v "$(pwd):/db" -e DATABASE_URL=sqlite:./db/gogin.db ghcr.io/amacneil/dbmate up 
+    ```
+5. Since the user of the docker container and the host differs, assign the db to the host user:
+    ```bash
+    sudo chown $USER:$USER ./db/gogin.db
     ```
 5. Start the server:
     ```bash
@@ -30,12 +34,12 @@ Sample API server built with Go and Gin framework.
 ## Building
 To build the application, run:
 ```bash
-go build -o remindify cmd/server/main.go
+go build -o main cmd/main.go
 ```
 
 To build docker image, run:
 ```bash
-docker build -f build/Dockerfile -t remindify-backend .
+docker build -f build/Dockerfile -t gogin .
 ``` 
 
 ## Testing
