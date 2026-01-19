@@ -11,8 +11,8 @@ type ContinentRepository struct {
 
 func (r ContinentRepository) GetContinentByCode(code string) (model.Continent, error) {
 	var continent model.Continent
-	err := r.Db.QueryRow("SELECT code, name FROM continent WHERE code = ?", code).Scan(&continent.Code, &continent.Name)
-	if err != nil {
+	if err := r.Db.QueryRow("SELECT code, name FROM continent WHERE code = ?", code).
+		Scan(&continent.Code, &continent.Name); err != nil {
 		return model.Continent{}, err
 	}
 	return continent, nil
@@ -23,7 +23,12 @@ func (r ContinentRepository) GetMany(limit, offset int) ([]model.Continent, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+
+		}
+	}(rows)
 
 	var continents []model.Continent
 	for rows.Next() {

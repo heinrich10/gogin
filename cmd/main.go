@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"gogin/internal/config"
 	"gogin/internal/controller"
@@ -9,7 +10,6 @@ import (
 	"gogin/internal/repository"
 	"log/slog"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -19,6 +19,7 @@ import (
 )
 
 func main() {
+	cfg := config.LoadConfig()
 	logger := slog.Default()
 
 	logger.Info("func", "main", "Starting...")
@@ -28,11 +29,15 @@ func main() {
 		return
 	}
 
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error("Failed to close database connection", "error", err)
+		}
+	}()
+
 	continentRepository := repository.ContinentRepository{Db: db}
 	countryRepository := repository.CountryRepository{Db: db}
 	personRepository := repository.PersonRepository{Db: db}
-
-	updatePersonChan := make(chan controller.UpdatePerson, 100)
 
 	continentController := controller.ContinentController{
 		Repository: &continentRepository,
@@ -42,6 +47,7 @@ func main() {
 		Repository: &countryRepository,
 	}
 
+	updatePersonChan := make(chan controller.UpdatePerson)
 	personController := controller.PersonController{
 		Repository:       &personRepository,
 		UpdatePersonChan: updatePersonChan,
@@ -51,11 +57,12 @@ func main() {
 
 	router := gin.Default()
 	router.Use(cors.Default())
-	err = router.SetTrustedProxies([]string{"127.0.0.1"})
-	if err != nil {
+
+	if err := router.SetTrustedProxies(cfg.TRUSTED_PROXIES); err != nil {
 		logger.Error("Failed to set trusted proxies", "error", err)
 		return
 	}
+
 	{
 		continentGroup := router.Group("/continents")
 		continentGroup.GET("/", continentController.Get)
@@ -73,39 +80,38 @@ func main() {
 		personGroup.POST("/", personController.Create)
 	}
 
-	hostPort := fmt.Sprintf("%s:%d", config.Config.HOST, config.Config.PORT)
+	hostPort := fmt.Sprintf("%s:%d", cfg.HOST, cfg.PORT)
 	srv := &http.Server{
 		Addr:    hostPort,
 		Handler: router,
 	}
 
 	go func() {
-		logger.Info(
-			fmt.Sprintf(
-				"Server running on %s",
-				hostPort,
-			),
-		)
-
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		logger.Info("Server running on", "address", hostPort)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("Failed to start server", "error", err)
 		}
 	}()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	logger.Info("Shutting down server...")
+	// Wait for termination signal.
+	sigCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	<-sigCtx.Done()
+	logger.Info("Shutdown requested")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Graceful shutdown with timeout.
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Error("Server forced to shutdown", "error", err)
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Error("Shutdown server", "error", err)
+	} else {
+		logger.Info("Server shutdown complete")
 	}
 
 	close(updatePersonChan)
-	if err := db.Close(); err != nil {
-		logger.Error("Failed to close database connection", "error", err)
-	}
-	logger.Info("Server exiting")
+
+	// small grace period for worker cleanup (adjust if needed)
+	time.Sleep(100 * time.Millisecond)
+
+	logger.Info("exiting")
 }

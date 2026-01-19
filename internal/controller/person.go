@@ -1,12 +1,13 @@
 package controller
 
 import (
+	"database/sql"
+	"errors"
 	"gogin/internal/model"
 	"gogin/internal/repository"
-	"net/http"
-	"strconv"
-
+	"gogin/internal/util"
 	"log/slog"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,31 +24,22 @@ func (d PersonController) StartWorker() {
 	slog.Info("func", "StartPersonWorker", "Starting person worker...")
 	for task := range d.UpdatePersonChan {
 		slog.Info("func", "StartWorker", slog.String("processing", task.Person.FirstName))
-		_ = d.Repository.Create(task.Person)
+		if err := d.Repository.Create(task.Person); err != nil {
+			slog.Error("func", "StartWorker", err)
+		} else {
+			slog.Info("func", "StartWorker", slog.String("created", task.Person.FirstName))
+		}
 	}
 }
 
 func (d PersonController) Get(c *gin.Context) {
 	slog.Info("func", "GetMany", slog.String("ip", c.ClientIP()))
 
-	limitStr := c.DefaultQuery("limit", "10")
-	pageStr := c.DefaultQuery("page", "1")
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-		limit = 10
-	}
-
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page <= 0 {
-		page = 1
-	}
-
-	offset := (page - 1) * limit
+	limit, offset := util.Paginate(c)
 
 	rs, err := d.Repository.GetMany(limit, offset)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
 		return
 	}
 
@@ -57,15 +49,22 @@ func (d PersonController) Get(c *gin.Context) {
 func (d PersonController) GetOne(c *gin.Context) {
 	slog.Info("func", "Get", slog.String("ip", c.ClientIP()))
 	id := c.Param("id")
-	rs, _ := d.Repository.GetPersonById(id)
+	rs, err := d.Repository.GetPersonById(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Person not found"})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
+		return
+	}
 	c.IndentedJSON(http.StatusOK, rs)
 }
 
 func (d PersonController) Create(c *gin.Context) {
 	slog.Info("func", "Create", slog.String("ip", c.ClientIP()))
 	var body model.Person
-	err := c.ShouldBindJSON(&body)
-	if err != nil {
+	if err := c.ShouldBindJSON(&body); err != nil {
 		return
 	}
 	d.UpdatePersonChan <- UpdatePerson{Person: body}

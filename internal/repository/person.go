@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"gogin/internal/model"
+	"log/slog"
 )
 
 type PersonRepository struct {
@@ -11,19 +12,31 @@ type PersonRepository struct {
 
 func (r PersonRepository) GetPersonById(id string) (model.Person, error) {
 	var person model.Person
-	err := r.Db.QueryRow("SELECT id, first_name, last_name, country_code, updated_at, created_at FROM person WHERE id = ?", id).Scan(&person.Id, &person.FirstName, &person.LastName, &person.CountryCode, &person.UpdatedAt, &person.CreatedAt)
-	if err != nil {
+	if err := r.Db.QueryRow(
+		"SELECT id, first_name, last_name, country_code, updated_at, created_at "+
+			"FROM person WHERE id = ?", id,
+	).Scan(
+		&person.Id, &person.FirstName, &person.LastName, &person.CountryCode, &person.UpdatedAt, &person.CreatedAt,
+	); err != nil {
 		return model.Person{}, err
 	}
 	return person, nil
 }
 
 func (r PersonRepository) GetMany(limit, offset int) ([]model.Person, error) {
-	rows, err := r.Db.Query("SELECT id, first_name, last_name, country_code FROM person LIMIT ? OFFSET ?", limit, offset)
+	rows, err := r.Db.Query(
+		"SELECT id, first_name, last_name, country_code "+
+			"FROM person LIMIT ? OFFSET ?", limit, offset,
+	)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			slog.Error("func", "GetMany", "close", err)
+		}
+	}(rows)
 
 	var persons []model.Person
 	for rows.Next() {
