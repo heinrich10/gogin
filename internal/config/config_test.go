@@ -9,15 +9,22 @@ import (
 
 func TestLoadConfig(t *testing.T) {
 	// Set environment variables for testing
-	os.Setenv("PORT", "4000")
-	os.Setenv("TRUSTED_PROXIES", "192.168.1.1, 10.0.0.1")
-	defer os.Unsetenv("PORT")
-	defer os.Unsetenv("TRUSTED_PROXIES")
+	PORT := "PORT"
+	TRUSTED_PROXIES := "TRUSTED_PROXIES"
+	port := "4000"
+	expectedPort := 4000
+	trustedProxies := "192.168.1.1, 10.0.0.1"
+	expectedTrustedProxies := []string{"192.168.1.1", "10.0.0.1"}
+
+	os.Setenv(PORT, port)
+	os.Setenv(TRUSTED_PROXIES, trustedProxies)
+	defer os.Unsetenv(PORT)
+	defer os.Unsetenv(TRUSTED_PROXIES)
 
 	cfg := LoadConfig()
 
-	assert.Equal(t, 4000, cfg.PORT)
-	assert.Equal(t, []string{"192.168.1.1", "10.0.0.1"}, cfg.TRUSTED_PROXIES)
+	assert.Equal(t, expectedPort, cfg.PORT)
+	assert.Equal(t, expectedTrustedProxies, cfg.TRUSTED_PROXIES)
 }
 
 func TestGetenv(t *testing.T) {

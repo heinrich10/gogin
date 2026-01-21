@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"gogin/internal/model"
+	"log/slog"
 )
 
 type ContinentRepositoryInterface interface {
@@ -31,7 +32,7 @@ func (r ContinentRepository) GetMany(limit, offset int) ([]model.Continent, erro
 	defer func(rows *sql.Rows) {
 		err := rows.Close()
 		if err != nil {
-
+			slog.Error("GetMany", "error", err)
 		}
 	}(rows)
 
