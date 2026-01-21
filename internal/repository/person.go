@@ -6,6 +6,12 @@ import (
 	"log/slog"
 )
 
+type PersonRepositoryInterface interface {
+	GetPersonById(id string) (model.Person, error)
+	GetMany(limit, offset int) ([]model.Person, error)
+	Create(body model.Person) error
+}
+
 type PersonRepository struct {
 	Db *sql.DB
 }
@@ -34,7 +40,7 @@ func (r PersonRepository) GetMany(limit, offset int) ([]model.Person, error) {
 	defer func(rows *sql.Rows) {
 		err := rows.Close()
 		if err != nil {
-			slog.Error("func", "GetMany", "close", err)
+			slog.Error("GetMany", "error", err)
 		}
 	}(rows)
 

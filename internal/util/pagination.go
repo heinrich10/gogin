@@ -15,6 +15,7 @@ func Paginate(c *gin.Context) (limit, offset int) {
 	)
 
 	var page int
+	limit = defaultLimit
 
 	if s := strings.TrimSpace(c.Query("limit")); s != "" {
 		if v, err := strconv.ParseInt(s, 10, 64); err == nil {
@@ -35,9 +36,11 @@ func Paginate(c *gin.Context) (limit, offset int) {
 			}
 			page = int(v)
 		}
+	} else {
+		page = defaultPage
 	}
 
-	offset = page * limit
+	offset = (page - 1) * limit
 	if offset <= 0 {
 		offset = 0
 	}

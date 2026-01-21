@@ -5,6 +5,11 @@ import (
 	"gogin/internal/model"
 )
 
+type ContinentRepositoryInterface interface {
+	GetContinentByCode(code string) (model.Continent, error)
+	GetMany(limit, offset int) ([]model.Continent, error)
+}
+
 type ContinentRepository struct {
 	Db *sql.DB
 }

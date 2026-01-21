@@ -16,7 +16,7 @@ type UpdatePerson struct {
 	Person model.Person
 }
 type PersonController struct {
-	Repository       *repository.PersonRepository
+	Repository       repository.PersonRepositoryInterface
 	UpdatePersonChan chan UpdatePerson
 }
 
@@ -65,8 +65,9 @@ func (d PersonController) Create(c *gin.Context) {
 	slog.Info("func", "Create", slog.String("ip", c.ClientIP()))
 	var body model.Person
 	if err := c.ShouldBindJSON(&body); err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 	d.UpdatePersonChan <- UpdatePerson{Person: body}
-	c.IndentedJSON(http.StatusOK, gin.H{"status": 1})
+	c.IndentedJSON(http.StatusAccepted, gin.H{"status": "queued"})
 }

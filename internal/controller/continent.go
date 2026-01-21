@@ -13,7 +13,7 @@ import (
 )
 
 type ContinentController struct {
-	Repository *repository.ContinentRepository
+	Repository repository.ContinentRepositoryInterface
 }
 
 func (d ContinentController) Get(c *gin.Context) {

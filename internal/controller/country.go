@@ -12,7 +12,7 @@ import (
 )
 
 type CountryController struct {
-	Repository *repository.CountryRepository
+	Repository repository.CountryRepositoryInterface
 }
 
 func (d CountryController) Get(c *gin.Context) {
