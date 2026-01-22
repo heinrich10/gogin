@@ -31,8 +31,7 @@ func (r CountryRepository) GetMany(limit, offset int) ([]model.Country, error) {
 	}
 
 	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
+		if closeErr := rows.Close(); closeErr != nil {
 			slog.Error("GetMany", "error", err)
 		}
 	}(rows)

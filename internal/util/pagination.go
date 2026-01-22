@@ -35,6 +35,8 @@ func Paginate(c *gin.Context) (limit, offset int) {
 				v = defaultPage
 			}
 			page = int(v)
+		} else {
+			page = defaultPage
 		}
 	} else {
 		page = defaultPage

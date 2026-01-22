@@ -38,8 +38,8 @@ func (r PersonRepository) GetMany(limit, offset int) ([]model.Person, error) {
 		return nil, err
 	}
 	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
+		if closeErr := rows.Close(); closeErr != nil {
+
 			slog.Error("GetMany", "error", err)
 		}
 	}(rows)

@@ -23,6 +23,7 @@ func (d ContinentController) Get(c *gin.Context) {
 
 	rs, err := d.Repository.GetMany(limit, offset)
 	if err != nil {
+		slog.Error("failed to get continents", "ip", c.ClientIP(), "err", err)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
 		return
 	}
@@ -39,6 +40,7 @@ func (d ContinentController) GetOne(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Continent not found"})
 			return
 		}
+		slog.Error("failed to get continent by code", "code", id, "ip", c.ClientIP(), "err", err)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
 		return
 	}

@@ -39,6 +39,7 @@ func (d PersonController) Get(c *gin.Context) {
 
 	rs, err := d.Repository.GetMany(limit, offset)
 	if err != nil {
+		slog.Error("failed to get persons", "ip", c.ClientIP(), "err", err)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
 		return
 	}
@@ -55,6 +56,7 @@ func (d PersonController) GetOne(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Person not found"})
 			return
 		}
+		slog.Error("failed to get person by id", "id", id, "ip", c.ClientIP(), "err", err)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
 		return
 	}

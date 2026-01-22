@@ -30,9 +30,8 @@ func (r ContinentRepository) GetMany(limit, offset int) ([]model.Continent, erro
 		return nil, err
 	}
 	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
-			slog.Error("GetMany", "error", err)
+		if closeErr := rows.Close(); closeErr != nil {
+			slog.Error("GetMany", "error", closeErr)
 		}
 	}(rows)
 
