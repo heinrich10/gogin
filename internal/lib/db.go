@@ -9,8 +9,9 @@ import (
 )
 
 func GetConnection() (*sql.DB, error) {
-	slog.Info("func", "GetConnection", slog.String("connecting", config.Config.DB_HOST))
-	db, err := sql.Open("sqlite", config.Config.DB_HOST)
+	Config := config.LoadConfig()
+	slog.Info("func", "GetConnection", slog.String("connecting", Config.DB_HOST))
+	db, err := sql.Open("sqlite", Config.DB_HOST)
 	if err != nil {
 		slog.Error("func", "GetConnection", err)
 		return nil, err

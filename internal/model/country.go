@@ -9,6 +9,4 @@ type Country struct {
 	Currency      string `json:"currency"`
 	ContinentCode string `json:"continent_code"`
 	Alpha3        string `json:"alpha3"`
-	updateAt      int64  // timestamp of the last update
-	createdAt     int64  // timestamp of creation
 }

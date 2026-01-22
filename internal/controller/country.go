@@ -1,40 +1,29 @@
 package controller
 
 import (
+	"database/sql"
+	"errors"
 	"gogin/internal/repository"
-	"net/http"
-	"strconv"
-
+	"gogin/internal/util"
 	"log/slog"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type CountryController struct {
-	Repository *repository.CountryRepository
+	Repository repository.CountryRepositoryInterface
 }
 
 func (d CountryController) Get(c *gin.Context) {
 	slog.Info("func", "GetMany", slog.String("ip", c.ClientIP()))
 
-	limitStr := c.DefaultQuery("limit", "10")
-	pageStr := c.DefaultQuery("page", "1")
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-		limit = 10
-	}
-
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page <= 0 {
-		page = 1
-	}
-
-	offset := (page - 1) * limit
+	limit, offset := util.Paginate(c)
 
 	rs, err := d.Repository.GetMany(limit, offset)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("failed to get countries", "ip", c.ClientIP(), "err", err)
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
 		return
 	}
 
@@ -44,6 +33,15 @@ func (d CountryController) Get(c *gin.Context) {
 func (d CountryController) GetOne(c *gin.Context) {
 	slog.Info("func", "Get", slog.String("ip", c.ClientIP()))
 	code := c.Param("code")
-	rs, _ := d.Repository.GetCountryByCode(code)
+	rs, err := d.Repository.GetCountryByCode(code)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Country not found"})
+			return
+		}
+		slog.Error("failed to get country by code", "code", code, "ip", c.ClientIP(), "err", err)
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
+		return
+	}
 	c.IndentedJSON(http.StatusOK, rs)
 }

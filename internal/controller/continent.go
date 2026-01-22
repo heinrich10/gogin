@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"gogin/internal/repository"
+	"gogin/internal/util"
 	"net/http"
-	"strconv"
 
 	"log/slog"
 
@@ -13,30 +13,18 @@ import (
 )
 
 type ContinentController struct {
-	Repository *repository.ContinentRepository
+	Repository repository.ContinentRepositoryInterface
 }
 
 func (d ContinentController) Get(c *gin.Context) {
 	slog.Info("func", "GetMany", slog.String("ip", c.ClientIP()))
 
-	limitStr := c.DefaultQuery("limit", "10")
-	pageStr := c.DefaultQuery("page", "1")
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-		limit = 10
-	}
-
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page <= 0 {
-		page = 1
-	}
-
-	offset := (page - 1) * limit
+	limit, offset := util.Paginate(c)
 
 	rs, err := d.Repository.GetMany(limit, offset)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("failed to get continents", "ip", c.ClientIP(), "err", err)
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
 		return
 	}
 
@@ -52,7 +40,8 @@ func (d ContinentController) GetOne(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Continent not found"})
 			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("failed to get continent by code", "code", id, "ip", c.ClientIP(), "err", err)
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
 		return
 	}
 	c.IndentedJSON(http.StatusOK, rs)
