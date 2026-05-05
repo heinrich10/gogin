@@ -1,4 +1,4 @@
--- migrate:up
+-- +goose Up
 INSERT INTO `continent` (`code`, `name`)
 VALUES ('AF', 'Africa'),
        ('AN', 'Antarctica'),
@@ -278,7 +278,7 @@ VALUES ('Doe', 'John', 'US'),
        ('Richards', 'Hayley', 'ZA'),
        ('Harris', 'Ella', 'ZA');
 
--- migrate:down
+-- +goose Down
 DELETE FROM `person`;
 DELETE FROM `country`;
 DELETE FROM `continent`;

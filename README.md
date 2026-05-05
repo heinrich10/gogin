@@ -20,15 +20,11 @@ Sample API server built with Go and Gin framework.
    ```
 4. Set up your database and run migrations
     ```bash
-    docker run --rm -it --network=host -v "$(pwd):/db" -e DATABASE_URL=sqlite:./db/gogin.db ghcr.io/amacneil/dbmate up 
-    ```
-5. Since the user of the docker container and the host differs, assign the db to the host user:
-    ```bash
-    sudo chown $USER:$USER ./db/gogin.db
+    go run cmd/migrate/main.go up
     ```
 5. Start the server:
     ```bash
-   go run cmd/server/main.go
+   go run cmd/main.go
    ```
 
 ## Building
@@ -54,7 +50,7 @@ go test ./...
 - `cmd/` - application entry points (e.g., `cmd/app/main.go`)
 - `configs` - configuration files
 - `internal/` - internal packages
-- `migration/` - SQL migration files
+- `migrations/` - SQL migration files
 
 ## Data Model
 
