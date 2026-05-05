@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -17,27 +16,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gogin/internal/app"
+	"gogin/internal/lib"
 	"gogin/internal/model"
 
 	_ "modernc.org/sqlite"
 )
-
-func migrationsDir(t *testing.T) string {
-	t.Helper()
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-
-	dir := wd
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			break
-		}
-		parent := filepath.Dir(dir)
-		require.NotEqual(t, parent, dir, "could not find project root containing go.mod")
-		dir = parent
-	}
-	return filepath.Join(dir, "migrations")
-}
 
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
@@ -47,7 +30,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 	require.NoError(t, db.Ping())
 
 	require.NoError(t, goose.SetDialect("sqlite3"))
-	require.NoError(t, goose.RunContext(t.Context(), "up", db, migrationsDir(t)))
+	migrationsDir, err := lib.MigrationsDir()
+	require.NoError(t, err)
+	require.NoError(t, goose.RunContext(t.Context(), "up", db, migrationsDir))
 
 	return db
 }
@@ -255,6 +240,18 @@ func TestAPI(t *testing.T) {
 		})
 
 		t.Run("async worker persists person", func(t *testing.T) {
+			body, _ := json.Marshal(model.Person{
+				FirstName:   "AsyncWorker",
+				LastName:    "Isolation",
+				CountryCode: "JP",
+			})
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodPost, "/persons/", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(w, req)
+			require.Equal(t, http.StatusAccepted, w.Code)
+
 			var found bool
 			for i := 0; i < 20; i++ {
 				w := httptest.NewRecorder()
@@ -264,7 +261,7 @@ func TestAPI(t *testing.T) {
 				var persons []model.Person
 				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &persons))
 				for _, p := range persons {
-					if p.FirstName == "Integration" && p.LastName == "Test" {
+					if p.FirstName == "AsyncWorker" && p.LastName == "Isolation" {
 						found = true
 						break
 					}

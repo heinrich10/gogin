@@ -3,32 +3,17 @@ package main
 import (
 	"context"
 	"database/sql"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gogin/internal/lib"
+
 	_ "modernc.org/sqlite"
 )
-
-func migrationsDir(t *testing.T) string {
-	t.Helper()
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-
-	dir := wd
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			break
-		}
-		parent := filepath.Dir(dir)
-		require.NotEqual(t, parent, dir, "could not find project root containing go.mod")
-		dir = parent
-	}
-	return filepath.Join(dir, "migrations")
-}
 
 func TestMigrations_UpAndDown(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -40,7 +25,8 @@ func TestMigrations_UpAndDown(t *testing.T) {
 
 	require.NoError(t, goose.SetDialect("sqlite3"))
 
-	dir := migrationsDir(t)
+	dir, err := lib.MigrationsDir()
+	require.NoError(t, err)
 	ctx := context.Background()
 
 	// Run all up migrations

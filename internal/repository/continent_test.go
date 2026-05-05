@@ -69,7 +69,7 @@ func TestContinentRepository_GetMany(t *testing.T) {
 		AddRow("AF", "Africa").
 		AddRow("AN", "Antarctica")
 
-	mock.ExpectQuery("SELECT code, name FROM continent LIMIT \\? OFFSET \\?").
+	mock.ExpectQuery("SELECT code, name FROM continent ORDER BY code LIMIT \\? OFFSET \\?").
 		WithArgs(limit, offset).
 		WillReturnRows(rows)
 
