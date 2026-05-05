@@ -2,7 +2,7 @@
 
 ## Scope and sources
 - This guide is derived from the current codebase and one convention-source scan: `README.md` was found; no existing `AGENT*.md`/Copilot/Claude/Cursor/Windsurf/Cline rule files were present.
-- Prefer code as source of truth when docs conflict (example: README starts `cmd/server/main.go`, but entrypoint is `cmd/main.go`).
+- Prefer code as source of truth if docs ever conflict.
 
 ## Big picture architecture
 - App is a single Gin HTTP service with layered structure: `cmd/main.go` calls `internal/app.NewRouter(db)` to wire `controller` -> `repository` -> SQLite (`internal/lib/db.go`).
@@ -31,7 +31,7 @@
 - Apply migrations: `go run ./cmd/migrate/main.go up` (native Go, no Docker required).
 
 ## Project-specific coding/testing conventions
-- Add repository interfaces first, then inject concrete structs in `cmd/main.go`; controllers should depend on interfaces, not concrete DB structs.
+- Add repository interfaces first, then wire concrete structs in `internal/app/app.go`; controllers should depend on interfaces, not concrete DB structs.
 - Controller tests use Gin test context + `testify/mock` repository doubles (see `internal/controller/person_test.go`).
 - Repository tests use `DATA-DOG/go-sqlmock` with explicit SQL expectation strings (see `internal/repository/*_test.go`).
 - API integration tests use `httptest` with the real `app.NewRouter(db)` against a temp-file SQLite DB running goose migrations (see `test/api_test.go`).
