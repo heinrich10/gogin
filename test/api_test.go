@@ -8,13 +8,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"runtime"
-	"sort"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -24,24 +22,21 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func execMigrationUp(t *testing.T, db *sql.DB, path string) {
+func migrationsDir(t *testing.T) string {
 	t.Helper()
-	content, err := os.ReadFile(path)
+	wd, err := os.Getwd()
 	require.NoError(t, err)
 
-	s := string(content)
-	upStart := strings.Index(s, "-- migrate:up")
-	downStart := strings.Index(s, "-- migrate:down")
-
-	var upSQL string
-	if upStart != -1 && downStart != -1 {
-		upSQL = s[upStart+len("-- migrate:up") : downStart]
-	} else if upStart != -1 {
-		upSQL = s[upStart+len("-- migrate:up"):]
+	dir := wd
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			break
+		}
+		parent := filepath.Dir(dir)
+		require.NotEqual(t, parent, dir, "could not find project root containing go.mod")
+		dir = parent
 	}
-
-	_, err = db.Exec(upSQL)
-	require.NoError(t, err, "failed to execute up migration: %s", filepath.Base(path))
+	return filepath.Join(dir, "migrations")
 }
 
 func setupTestDB(t *testing.T) *sql.DB {
@@ -51,17 +46,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 	db.SetMaxOpenConns(1)
 	require.NoError(t, db.Ping())
 
-	// Resolve project root relative to this test file.
-	_, filename, _, _ := runtime.Caller(0)
-	projectRoot := filepath.Join(filepath.Dir(filename), "..")
-
-	// Apply all migrations in lexical (timestamp) order.
-	migrationFiles, err := filepath.Glob(filepath.Join(projectRoot, "migrations", "*.sql"))
-	require.NoError(t, err)
-	sort.Strings(migrationFiles)
-	for _, f := range migrationFiles {
-		execMigrationUp(t, db, f)
-	}
+	require.NoError(t, goose.SetDialect("sqlite3"))
+	require.NoError(t, goose.RunContext(t.Context(), "up", db, migrationsDir(t)))
 
 	return db
 }
