@@ -5,7 +5,7 @@
 - Prefer code as source of truth when docs conflict (example: README starts `cmd/server/main.go`, but entrypoint is `cmd/main.go`).
 
 ## Big picture architecture
-- App is a single Gin HTTP service with layered structure: `cmd/main.go` wires `controller` -> `repository` -> SQLite (`internal/lib/db.go`).
+- App is a single Gin HTTP service with layered structure: `cmd/main.go` calls `internal/app.NewRouter(db)` to wire `controller` -> `repository` -> SQLite (`internal/lib/db.go`).
 - Domain split is by resource: `continent`, `country`, `person` in `internal/{controller,repository,model}`.
 - Controllers depend on repository interfaces (`internal/controller/*.go`), enabling mock-based unit tests.
 - Repository layer uses `database/sql` with SQLite driver `modernc.org/sqlite` and positional `?` placeholders.
@@ -20,19 +20,21 @@
 ## Config, DB, and migrations
 - Runtime config auto-loads from env via `godotenv/autoload` (`internal/config/config.go`); key vars: `DB_HOST`, `HOST`, `PORT`, `TRUSTED_PROXIES`.
 - `.env.example` default DB path is `./gogin.db`; DB connection currently sets `SetMaxOpenConns(1)` for SQLite safety.
-- Schema/migration source is `migrations/` (dbmate format: `-- migrate:up/down`), with full snapshot in `schema.sql`.
+- Schema/migration source is `migrations/` (goose format: `-- +goose Up/Down`), with full snapshot in `schema.sql`.
+- Migrations are run via the native Go CLI: `go run ./cmd/migrate/main.go up` (uses `pressly/goose/v3`, no Docker required).
 - Seed migration (`migrations/20260115134736_seed_data.sql`) inserts large country dataset + sample persons; keep new seeds idempotency expectations in mind.
 
 ## Developer workflows (verified)
 - Run tests: `go test ./...` (verified passing on 2026-05-03).
 - Run service from repo root: `go run ./cmd/main.go`.
 - Build binary: `go build -o main ./cmd/main.go`.
-- Apply migrations (from README pattern): `dbmate up` against SQLite file in repo root.
+- Apply migrations: `go run ./cmd/migrate/main.go up` (native Go, no Docker required).
 
 ## Project-specific coding/testing conventions
 - Add repository interfaces first, then inject concrete structs in `cmd/main.go`; controllers should depend on interfaces, not concrete DB structs.
 - Controller tests use Gin test context + `testify/mock` repository doubles (see `internal/controller/person_test.go`).
 - Repository tests use `DATA-DOG/go-sqlmock` with explicit SQL expectation strings (see `internal/repository/*_test.go`).
+- API integration tests use `httptest` with the real `app.NewRouter(db)` against a temp-file SQLite DB running goose migrations (see `test/api_test.go`).
 - Pagination contract: default `limit=10`, `page=1`, max limit `100`; invalid/negative query values fall back to defaults (`internal/util/pagination.go`).
 - Keep HTTP JSON field names aligned with model tags in `internal/model/*.go` when adding fields/endpoints.
 
@@ -40,6 +42,6 @@
 - Add/extend model in `internal/model`.
 - Add repository interface method + SQL implementation + sqlmock tests.
 - Add controller handler using existing error/response conventions + mock-based controller tests.
-- Wire route in `cmd/main.go`; if async behavior is needed, follow the person channel/worker pattern.
+- Wire route in `internal/app/app.go`; if async behavior is needed, follow the person channel/worker pattern.
 - Update migrations and, when schema changes, refresh `schema.sql` snapshot.
 
