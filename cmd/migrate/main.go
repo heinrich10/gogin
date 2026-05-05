@@ -1,58 +1,44 @@
 package main
 
 import (
-	"fmt"
-	"gogin/internal/config"
+	"context"
 	"gogin/internal/lib"
+	"log/slog"
 	"os"
-	"path/filepath"
-	"sort"
-	"strings"
+
+	"github.com/pressly/goose/v3"
+	_ "modernc.org/sqlite"
 )
 
 func main() {
-	cfg := config.LoadConfig()
+	logger := slog.Default()
 
 	db, err := lib.GetConnection()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to connect to database: %v\n", err)
+		logger.Error("failed to get database connection", slog.Any("error", err))
 		os.Exit(1)
 	}
 	defer db.Close()
 
-	// Resolve migrations directory relative to module root.
-	// When run with `go run ./cmd/migrate/main.go` the working directory is the module root.
-	migrationFiles, err := filepath.Glob("migrations/*.sql")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to list migrations: %v\n", err)
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		logger.Error("failed to set dialect", slog.Any("error", err))
 		os.Exit(1)
 	}
-	sort.Strings(migrationFiles)
 
-	for _, f := range migrationFiles {
-		content, err := os.ReadFile(f)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to read %s: %v\n", f, err)
-			os.Exit(1)
-		}
-
-		s := string(content)
-		upStart := strings.Index(s, "-- migrate:up")
-		downStart := strings.Index(s, "-- migrate:down")
-
-		var upSQL string
-		if upStart != -1 && downStart != -1 {
-			upSQL = s[upStart+len("-- migrate:up") : downStart]
-		} else if upStart != -1 {
-			upSQL = s[upStart+len("-- migrate:up"):]
-		}
-
-		if _, err := db.Exec(upSQL); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to execute %s: %v\n", f, err)
-			os.Exit(1)
-		}
-		fmt.Printf("applied: %s\n", filepath.Base(f))
+	if len(os.Args) < 2 {
+		logger.Error("missing command", slog.String("usage", "go run cmd/migrate/main.go <command> [args...]"))
+		os.Exit(1)
 	}
 
-	fmt.Printf("migrations applied successfully to %s\n", cfg.DB_HOST)
+	command := os.Args[1]
+	var args []string
+	if len(os.Args) > 2 {
+		args = append(args, os.Args[2:]...)
+	}
+
+	ctx := context.Background()
+	if err := goose.RunContext(ctx, command, db, "migrations", args...); err != nil {
+		logger.Error("migration failed", slog.String("command", command), slog.Any("error", err))
+		os.Exit(1)
+	}
 }

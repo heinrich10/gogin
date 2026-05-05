@@ -1,4 +1,4 @@
--- migrate:up
+-- +goose Up
 DROP TABLE IF EXISTS person;
 DROP TABLE IF EXISTS country;
 DROP TABLE IF EXISTS continent;
@@ -38,7 +38,7 @@ CREATE TABLE person
 
 CREATE INDEX idx_person_country_code ON person (country_code);
 
--- migrate:down
+-- +goose Down
 DROP TABLE IF EXISTS person;
 DROP TABLE IF EXISTS country;
 DROP TABLE IF EXISTS continent;
