@@ -25,7 +25,7 @@ func (r CountryRepository) GetCountryByCode(code string) (model.Country, error) 
 }
 
 func (r CountryRepository) GetMany(limit, offset int) ([]model.Country, error) {
-	rows, err := r.Db.Query("SELECT code, name FROM country LIMIT ? OFFSET ?", limit, offset)
+	rows, err := r.Db.Query("SELECT code, name FROM country ORDER BY code LIMIT ? OFFSET ?", limit, offset)
 	if err != nil {
 		return nil, err
 	}

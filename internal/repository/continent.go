@@ -25,7 +25,7 @@ func (r ContinentRepository) GetContinentByCode(code string) (model.Continent, e
 }
 
 func (r ContinentRepository) GetMany(limit, offset int) ([]model.Continent, error) {
-	rows, err := r.Db.Query("SELECT code, name FROM continent LIMIT ? OFFSET ?", limit, offset)
+	rows, err := r.Db.Query("SELECT code, name FROM continent ORDER BY code LIMIT ? OFFSET ?", limit, offset)
 	if err != nil {
 		return nil, err
 	}

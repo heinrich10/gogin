@@ -49,7 +49,7 @@ func TestCountryRepository_GetMany(t *testing.T) {
 		AddRow("US", "United States").
 		AddRow("CA", "Canada")
 
-	mock.ExpectQuery("SELECT code, name FROM country LIMIT \\? OFFSET \\?").
+	mock.ExpectQuery("SELECT code, name FROM country ORDER BY code LIMIT \\? OFFSET \\?").
 		WithArgs(limit, offset).
 		WillReturnRows(rows)
 
