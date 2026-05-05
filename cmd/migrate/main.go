@@ -2,9 +2,8 @@ package main
 
 import (
 	"context"
-	"database/sql"
-	"gogin/internal/config"
-	"log"
+	"gogin/internal/lib"
+	"log/slog"
 	"os"
 
 	"github.com/pressly/goose/v3"
@@ -12,23 +11,23 @@ import (
 )
 
 func main() {
-	cfg := config.LoadConfig()
-	if cfg.DB_HOST == "" {
-		log.Fatal("DB_HOST is not set")
-	}
+	logger := slog.Default()
 
-	db, err := sql.Open("sqlite", cfg.DB_HOST)
+	db, err := lib.GetConnection()
 	if err != nil {
-		log.Fatalf("failed to open database: %v", err)
+		logger.Error("failed to get database connection", slog.Any("error", err))
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	if err := goose.SetDialect("sqlite3"); err != nil {
-		log.Fatalf("failed to set dialect: %v", err)
+		logger.Error("failed to set dialect", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	if len(os.Args) < 2 {
-		log.Fatalf("usage: %s <command> [args...]", os.Args[0])
+		logger.Error("missing command", slog.String("usage", "go run cmd/migrate/main.go <command> [args...]"))
+		os.Exit(1)
 	}
 
 	command := os.Args[1]
@@ -39,6 +38,7 @@ func main() {
 
 	ctx := context.Background()
 	if err := goose.RunContext(ctx, command, db, "migrations", args...); err != nil {
-		log.Fatalf("goose %s: %v", command, err)
+		logger.Error("migration failed", slog.String("command", command), slog.Any("error", err))
+		os.Exit(1)
 	}
 }
