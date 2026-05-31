@@ -1,10 +1,12 @@
 package app
 
 import (
+	"context"
 	"database/sql"
 	"gogin/internal/config"
 	"gogin/internal/controller"
 	"gogin/internal/repository"
+	"sync"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -14,7 +16,7 @@ import (
 // NewRouter builds a fully wired Gin engine with all controllers and routes.
 // It also returns the UpdatePerson channel so the caller can manage its
 // lifecycle (e.g. close it on shutdown).
-func NewRouter(db *sql.DB, cfg *config.Config) (*gin.Engine, chan controller.UpdatePerson) {
+func NewRouter(ctx context.Context, wg *sync.WaitGroup, db *sql.DB, cfg *config.Config) (*gin.Engine, chan controller.UpdatePerson) {
 	continentRepository := repository.ContinentRepository{Db: db}
 	countryRepository := repository.CountryRepository{Db: db}
 	personRepository := repository.PersonRepository{Db: db}
@@ -27,13 +29,16 @@ func NewRouter(db *sql.DB, cfg *config.Config) (*gin.Engine, chan controller.Upd
 		Repository: &countryRepository,
 	}
 
-	updatePersonChan := make(chan controller.UpdatePerson)
+	updatePersonChan := make(chan controller.UpdatePerson, 100)
 	personController := controller.PersonController{
 		Repository:       &personRepository,
 		UpdatePersonChan: updatePersonChan,
 	}
 
-	go personController.StartWorker()
+	if wg != nil {
+		wg.Add(1)
+	}
+	go personController.StartWorker(ctx, wg)
 
 	allowCredentials := true
 	for _, origin := range cfg.ALLOWED_ORIGINS {

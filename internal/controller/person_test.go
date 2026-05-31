@@ -2,11 +2,13 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"gogin/internal/model"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -181,7 +183,7 @@ func TestPersonController_Create(t *testing.T) {
 
 func TestPersonController_StartWorker(t *testing.T) {
 	mockRepo := new(MockPersonRepository)
-	updateChan := make(chan UpdatePerson)
+	updateChan := make(chan UpdatePerson, 1) // Buffered to avoid blocking
 	ctrl := PersonController{
 		Repository:       mockRepo,
 		UpdatePersonChan: updateChan,
@@ -190,13 +192,17 @@ func TestPersonController_StartWorker(t *testing.T) {
 	person := model.Person{FirstName: "John", LastName: "Doe"}
 	mockRepo.On("Create", person).Return(nil)
 
-	go ctrl.StartWorker()
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+	wg.Add(1)
+	go ctrl.StartWorker(ctx, &wg)
 
 	updateChan <- UpdatePerson{Person: person}
 
-	// Give some time for worker to process
-	time.Sleep(50 * time.Millisecond)
-
+	// Wait for worker to finish processing and draining
 	close(updateChan)
+	wg.Wait()
+	cancel() // Cleanup context as well
+
 	mockRepo.AssertExpectations(t)
 }

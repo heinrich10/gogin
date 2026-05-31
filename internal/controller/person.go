@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"gogin/internal/model"
@@ -8,6 +9,7 @@ import (
 	"gogin/internal/util"
 	"log/slog"
 	"net/http"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,15 +22,53 @@ type PersonController struct {
 	UpdatePersonChan chan UpdatePerson
 }
 
-func (d PersonController) StartWorker() {
+func (d PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
+	if wg != nil {
+		defer wg.Done()
+	}
 	slog.Info("func", "StartPersonWorker", "Starting person worker...")
-	for task := range d.UpdatePersonChan {
-		slog.Info("func", "StartWorker", slog.String("processing", "person update task"))
-		if err := d.Repository.Create(task.Person); err != nil {
-			slog.Error("func", "StartWorker", err)
-		} else {
-			slog.Info("func", "StartWorker", slog.String("status", "created"))
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			slog.Info("func", "StartWorker", "Context cancelled, draining channel...")
+			// Close the channel if we're draining to prevent further sends and ensure the loop terminates
+			// Wait, we don't own the channel here usually, but if we are draining, we need to know when to stop.
+			// The issue says: "On ctx.Done(), the worker drains by ranging over UpdatePersonChan, which blocks until the channel is closed."
+			// We should probably check the channel in a non-blocking way or use a different approach.
+			for {
+				select {
+				case task, ok := <-d.UpdatePersonChan:
+					if !ok {
+						slog.Info("func", "StartWorker", "Worker finished draining.")
+						return
+					}
+					d.processTask(task)
+				default:
+					slog.Info("func", "StartWorker", "Worker finished draining (no more tasks).")
+					return
+				}
+			}
+		case task, ok := <-d.UpdatePersonChan:
+			if !ok {
+				slog.Info("func", "StartWorker", "Channel closed, worker stopping.")
+				return
+			}
+			d.processTask(task)
 		}
+	}
+}
+
+func (d PersonController) processTask(task UpdatePerson) {
+	slog.Info("func", "processTask", slog.String("processing", task.Person.FirstName))
+	if err := d.Repository.Create(task.Person); err != nil {
+		slog.Error("func", "processTask", err)
+	} else {
+		slog.Info("func", "processTask", slog.String("created", task.Person.FirstName))
 	}
 }
 
