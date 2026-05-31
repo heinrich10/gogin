@@ -23,11 +23,11 @@ type PersonController struct {
 func (d PersonController) StartWorker() {
 	slog.Info("func", "StartPersonWorker", "Starting person worker...")
 	for task := range d.UpdatePersonChan {
-		slog.Info("func", "StartWorker", slog.String("processing", task.Person.FirstName))
+		slog.Info("func", "StartWorker", slog.String("processing", "person update task"))
 		if err := d.Repository.Create(task.Person); err != nil {
 			slog.Error("func", "StartWorker", err)
 		} else {
-			slog.Info("func", "StartWorker", slog.String("created", task.Person.FirstName))
+			slog.Info("func", "StartWorker", slog.String("status", "created"))
 		}
 	}
 }
