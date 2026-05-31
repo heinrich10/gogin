@@ -145,6 +145,38 @@ func TestPersonController_Create(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
+
+	t.Run("Validation Failure - Missing FirstName", func(t *testing.T) {
+		ctrl := PersonController{}
+
+		person := model.Person{LastName: "Doe", CountryCode: "US"}
+		body, _ := json.Marshal(person)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("POST", "/persons", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		ctrl.Create(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("Validation Failure - Invalid CountryCode", func(t *testing.T) {
+		ctrl := PersonController{}
+
+		person := model.Person{FirstName: "John", LastName: "Doe", CountryCode: "USA"}
+		body, _ := json.Marshal(person)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("POST", "/persons", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		ctrl.Create(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
 }
 
 func TestPersonController_StartWorker(t *testing.T) {

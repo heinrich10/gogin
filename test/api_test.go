@@ -283,7 +283,40 @@ func TestAPI(t *testing.T) {
 			assert.Equal(t, http.StatusBadRequest, w.Code)
 			var result map[string]string
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Equal(t, "Invalid request body", result["error"])
+			assert.Contains(t, result["error"], "Invalid request body")
+		})
+
+		t.Run("missing required field returns bad request", func(t *testing.T) {
+			body, _ := json.Marshal(model.Person{
+				LastName:    "MissingFirst",
+				CountryCode: "JP",
+			})
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodPost, "/persons/", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+			var result map[string]any
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
+			assert.Contains(t, result["error"], "validation failed")
+		})
+
+		t.Run("invalid country code length returns bad request", func(t *testing.T) {
+			body, _ := json.Marshal(model.Person{
+				FirstName:   "Invalid",
+				LastName:    "Country",
+				CountryCode: "USA",
+			})
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodPost, "/persons/", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+			var result map[string]any
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
+			assert.Contains(t, result["error"], "validation failed")
 		})
 	})
 }

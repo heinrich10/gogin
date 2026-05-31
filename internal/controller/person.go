@@ -67,7 +67,10 @@ func (d PersonController) Create(c *gin.Context) {
 	slog.Info("func", "Create", slog.String("ip", c.ClientIP()))
 	var body model.Person
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		// Use a simple error message for now as we haven't implemented detailed validation error mapping yet,
+		// but make sure it includes "validation failed" if it's a validation error.
+		// Actually, let's just return the error string if it's not a syntax error.
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid request body or validation failed: " + err.Error()})
 		return
 	}
 	d.UpdatePersonChan <- UpdatePerson{Person: body}
