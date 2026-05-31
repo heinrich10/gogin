@@ -2,11 +2,13 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"gogin/internal/model"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -190,13 +192,18 @@ func TestPersonController_StartWorker(t *testing.T) {
 	person := model.Person{FirstName: "John", LastName: "Doe"}
 	mockRepo.On("Create", person).Return(nil)
 
-	go ctrl.StartWorker()
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+	wg.Add(1)
+	go ctrl.StartWorker(ctx, &wg)
 
 	updateChan <- UpdatePerson{Person: person}
 
 	// Give some time for worker to process
 	time.Sleep(50 * time.Millisecond)
 
+	cancel()
 	close(updateChan)
+	wg.Wait()
 	mockRepo.AssertExpectations(t)
 }

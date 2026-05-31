@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"gogin/internal/model"
@@ -8,6 +9,7 @@ import (
 	"gogin/internal/util"
 	"log/slog"
 	"net/http"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,15 +22,35 @@ type PersonController struct {
 	UpdatePersonChan chan UpdatePerson
 }
 
-func (d PersonController) StartWorker() {
+func (d PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
 	slog.Info("func", "StartPersonWorker", "Starting person worker...")
-	for task := range d.UpdatePersonChan {
-		slog.Info("func", "StartWorker", slog.String("processing", task.Person.FirstName))
-		if err := d.Repository.Create(task.Person); err != nil {
-			slog.Error("func", "StartWorker", err)
-		} else {
-			slog.Info("func", "StartWorker", slog.String("created", task.Person.FirstName))
+	for {
+		select {
+		case <-ctx.Done():
+			slog.Info("func", "StartWorker", "Context cancelled, draining channel...")
+			// Drain the remaining tasks in the channel
+			for task := range d.UpdatePersonChan {
+				d.processTask(task)
+			}
+			slog.Info("func", "StartWorker", "Worker finished draining.")
+			return
+		case task, ok := <-d.UpdatePersonChan:
+			if !ok {
+				slog.Info("func", "StartWorker", "Channel closed, worker stopping.")
+				return
+			}
+			d.processTask(task)
 		}
+	}
+}
+
+func (d PersonController) processTask(task UpdatePerson) {
+	slog.Info("func", "processTask", slog.String("processing", task.Person.FirstName))
+	if err := d.Repository.Create(task.Person); err != nil {
+		slog.Error("func", "processTask", err)
+	} else {
+		slog.Info("func", "processTask", slog.String("created", task.Person.FirstName))
 	}
 }
 

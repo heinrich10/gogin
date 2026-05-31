@@ -2,11 +2,13 @@ package api_test
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -43,10 +45,15 @@ func TestAPI(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	router, updateChan := app.NewRouter(db)
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	router, updateChan := app.NewRouter(ctx, &wg, db)
 	defer func() {
 		close(updateChan)
-		time.Sleep(100 * time.Millisecond)
+		cancel()
+		wg.Wait()
 	}()
 
 	t.Run("continents", func(t *testing.T) {

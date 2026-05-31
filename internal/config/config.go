@@ -13,6 +13,7 @@ type Config struct {
 	HOST            string
 	PORT            int
 	TRUSTED_PROXIES []string
+	ALLOWED_ORIGINS []string
 }
 
 func LoadConfig() *Config {
@@ -21,6 +22,7 @@ func LoadConfig() *Config {
 		HOST:            getenv[string]("HOST", ""),
 		PORT:            getenv[int]("PORT", 3000),
 		TRUSTED_PROXIES: getenv[[]string]("TRUSTED_PROXIES", []string{"127.0.0.1"}),
+		ALLOWED_ORIGINS: getenv[[]string]("ALLOWED_ORIGINS", []string{"*"}),
 	}
 	return cfg
 }

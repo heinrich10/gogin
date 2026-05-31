@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -31,7 +32,11 @@ func main() {
 		}
 	}()
 
-	router, updatePersonChan := app.NewRouter(db)
+	var wg sync.WaitGroup
+	ctx, cancelWorker := context.WithCancel(context.Background())
+	defer cancelWorker()
+
+	router, updatePersonChan := app.NewRouter(ctx, &wg, db)
 
 	if err := router.SetTrustedProxies(cfg.TRUSTED_PROXIES); err != nil {
 		logger.Error("Failed to set trusted proxies", "error", err)
@@ -67,9 +72,8 @@ func main() {
 	}
 
 	close(updatePersonChan)
-
-	// small grace period for worker cleanup (adjust if needed)
-	time.Sleep(100 * time.Millisecond)
+	cancelWorker()
+	wg.Wait()
 
 	logger.Info("exiting")
 }
