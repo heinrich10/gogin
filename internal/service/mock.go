@@ -58,6 +58,34 @@ func (m *MockPersonService) StartWorker(ctx context.Context, wg *sync.WaitGroup)
 	m.Called(ctx, wg)
 }
 
+type MockContinentRepository struct {
+	mock.Mock
+}
+
+func (m *MockContinentRepository) GetContinentByCode(ctx context.Context, code string) (model.Continent, error) {
+	args := m.Called(ctx, code)
+	return args.Get(0).(model.Continent), args.Error(1)
+}
+
+func (m *MockContinentRepository) GetMany(ctx context.Context, limit, offset int) ([]model.Continent, error) {
+	args := m.Called(ctx, limit, offset)
+	return args.Get(0).([]model.Continent), args.Error(1)
+}
+
+type MockCountryRepository struct {
+	mock.Mock
+}
+
+func (m *MockCountryRepository) GetCountryByCode(ctx context.Context, code string) (model.Country, error) {
+	args := m.Called(ctx, code)
+	return args.Get(0).(model.Country), args.Error(1)
+}
+
+func (m *MockCountryRepository) GetMany(ctx context.Context, limit, offset int) ([]model.Country, error) {
+	args := m.Called(ctx, limit, offset)
+	return args.Get(0).([]model.Country), args.Error(1)
+}
+
 type MockPersonRepository struct {
 	mock.Mock
 }
