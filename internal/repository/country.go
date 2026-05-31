@@ -1,31 +1,32 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"gogin/internal/model"
 	"log/slog"
 )
 
 type CountryRepositoryInterface interface {
-	GetCountryByCode(code string) (model.Country, error)
-	GetMany(limit, offset int) ([]model.Country, error)
+	GetCountryByCode(ctx context.Context, code string) (model.Country, error)
+	GetMany(ctx context.Context, limit, offset int) ([]model.Country, error)
 }
 
 type CountryRepository struct {
 	Db *sql.DB
 }
 
-func (r CountryRepository) GetCountryByCode(code string) (model.Country, error) {
+func (r CountryRepository) GetCountryByCode(ctx context.Context, code string) (model.Country, error) {
 	var country model.Country
-	if err := r.Db.QueryRow("SELECT code, name FROM country WHERE code = ?", code).
+	if err := r.Db.QueryRowContext(ctx, "SELECT code, name FROM country WHERE code = ?", code).
 		Scan(&country.Code, &country.Name); err != nil {
 		return model.Country{}, err
 	}
 	return country, nil
 }
 
-func (r CountryRepository) GetMany(limit, offset int) ([]model.Country, error) {
-	rows, err := r.Db.Query("SELECT code, name FROM country ORDER BY code LIMIT ? OFFSET ?", limit, offset)
+func (r CountryRepository) GetMany(ctx context.Context, limit, offset int) ([]model.Country, error) {
+	rows, err := r.Db.QueryContext(ctx, "SELECT code, name FROM country ORDER BY code LIMIT ? OFFSET ?", limit, offset)
 	if err != nil {
 		return nil, err
 	}

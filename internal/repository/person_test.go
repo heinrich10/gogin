@@ -25,7 +25,7 @@ func TestPersonRepository_GetPersonById(t *testing.T) {
 		WithArgs(id).
 		WillReturnRows(rows)
 
-	res, err := repo.GetPersonById(id)
+	res, err := repo.GetPersonById(t.Context(), id)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(1), res.Id)
 	assert.Equal(t, "John", res.FirstName)
@@ -53,7 +53,7 @@ func TestPersonRepository_GetMany(t *testing.T) {
 		WithArgs(limit, offset).
 		WillReturnRows(rows)
 
-	res, err := repo.GetMany(limit, offset)
+	res, err := repo.GetMany(t.Context(), limit, offset)
 	assert.NoError(t, err)
 	assert.Len(t, res, 2)
 	assert.Equal(t, int64(1), res[0].Id)
@@ -82,7 +82,7 @@ func TestPersonRepository_Create(t *testing.T) {
 		WithArgs(person.FirstName, person.LastName, person.CountryCode).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	err = repo.Create(person)
+	err = repo.Create(t.Context(), person)
 	assert.NoError(t, err)
 
 	if err := mock.ExpectationsWereMet(); err != nil {

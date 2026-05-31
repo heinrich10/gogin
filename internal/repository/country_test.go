@@ -25,7 +25,7 @@ func TestCountryRepository_GetCountryByCode(t *testing.T) {
 		WithArgs(code).
 		WillReturnRows(rows)
 
-	res, err := repo.GetCountryByCode(code)
+	res, err := repo.GetCountryByCode(t.Context(), code)
 	assert.NoError(t, err)
 	assert.Equal(t, code, res.Code)
 	assert.Equal(t, name, res.Name)
@@ -53,7 +53,7 @@ func TestCountryRepository_GetMany(t *testing.T) {
 		WithArgs(limit, offset).
 		WillReturnRows(rows)
 
-	res, err := repo.GetMany(limit, offset)
+	res, err := repo.GetMany(t.Context(), limit, offset)
 	assert.NoError(t, err)
 	assert.Len(t, res, 2)
 	assert.Equal(t, "US", res[0].Code)

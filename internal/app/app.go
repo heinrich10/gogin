@@ -16,7 +16,7 @@ import (
 // NewRouter builds a fully wired Gin engine with all controllers and routes.
 // It also returns the UpdatePerson channel so the caller can manage its
 // lifecycle (e.g. close it on shutdown).
-func NewRouter(ctx context.Context, wg *sync.WaitGroup, db *sql.DB, cfg *config.Config) (*gin.Engine, chan controller.UpdatePerson) {
+func NewRouter(ctx context.Context, shutdownCtx context.Context, wg *sync.WaitGroup, db *sql.DB, cfg *config.Config) (*gin.Engine, chan controller.UpdatePerson) {
 	continentRepository := repository.ContinentRepository{Db: db}
 	countryRepository := repository.CountryRepository{Db: db}
 	personRepository := repository.PersonRepository{Db: db}
@@ -33,6 +33,7 @@ func NewRouter(ctx context.Context, wg *sync.WaitGroup, db *sql.DB, cfg *config.
 	personController := controller.PersonController{
 		Repository:       &personRepository,
 		UpdatePersonChan: updatePersonChan,
+		ShutdownCtx:      shutdownCtx,
 	}
 
 	if wg != nil {

@@ -22,18 +22,18 @@ type MockPersonRepository struct {
 	mock.Mock
 }
 
-func (m *MockPersonRepository) GetPersonById(id string) (model.Person, error) {
-	args := m.Called(id)
+func (m *MockPersonRepository) GetPersonById(ctx context.Context, id string) (model.Person, error) {
+	args := m.Called(ctx, id)
 	return args.Get(0).(model.Person), args.Error(1)
 }
 
-func (m *MockPersonRepository) GetMany(limit, offset int) ([]model.Person, error) {
-	args := m.Called(limit, offset)
+func (m *MockPersonRepository) GetMany(ctx context.Context, limit, offset int) ([]model.Person, error) {
+	args := m.Called(ctx, limit, offset)
 	return args.Get(0).([]model.Person), args.Error(1)
 }
 
-func (m *MockPersonRepository) Create(body model.Person) error {
-	args := m.Called(body)
+func (m *MockPersonRepository) Create(ctx context.Context, body model.Person) error {
+	args := m.Called(ctx, body)
 	return args.Error(0)
 }
 
@@ -48,7 +48,7 @@ func TestPersonController_Get(t *testing.T) {
 			{Id: 1, FirstName: "John", LastName: "Doe"},
 		}
 
-		mockRepo.On("GetMany", 10, 0).Return(persons, nil)
+		mockRepo.On("GetMany", mock.Anything, 10, 0).Return(persons, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -73,7 +73,7 @@ func TestPersonController_GetOne(t *testing.T) {
 		ctrl := PersonController{Repository: mockRepo}
 
 		person := model.Person{Id: 1, FirstName: "John", LastName: "Doe"}
-		mockRepo.On("GetPersonById", "1").Return(person, nil)
+		mockRepo.On("GetPersonById", mock.Anything, "1").Return(person, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -94,7 +94,7 @@ func TestPersonController_GetOne(t *testing.T) {
 		mockRepo := new(MockPersonRepository)
 		ctrl := PersonController{Repository: mockRepo}
 
-		mockRepo.On("GetPersonById", "99").Return(model.Person{}, sql.ErrNoRows)
+		mockRepo.On("GetPersonById", mock.Anything, "99").Return(model.Person{}, sql.ErrNoRows)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -190,7 +190,7 @@ func TestPersonController_StartWorker(t *testing.T) {
 	}
 
 	person := model.Person{FirstName: "John", LastName: "Doe"}
-	mockRepo.On("Create", person).Return(nil)
+	mockRepo.On("Create", mock.Anything, person).Return(nil)
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())

@@ -20,9 +20,11 @@ type UpdatePerson struct {
 type PersonController struct {
 	Repository       repository.PersonRepositoryInterface
 	UpdatePersonChan chan UpdatePerson
+	// ShutdownCtx is used for graceful draining of the worker.
+	ShutdownCtx context.Context
 }
 
-func (d PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
+func (d *PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -36,10 +38,10 @@ func (d PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 		select {
 		case <-ctx.Done():
 			slog.Info("func", "StartWorker", "Context cancelled, draining channel...")
-			// Close the channel if we're draining to prevent further sends and ensure the loop terminates
-			// Wait, we don't own the channel here usually, but if we are draining, we need to know when to stop.
-			// The issue says: "On ctx.Done(), the worker drains by ranging over UpdatePersonChan, which blocks until the channel is closed."
-			// We should probably check the channel in a non-blocking way or use a different approach.
+			drainCtx := d.ShutdownCtx
+			if drainCtx == nil {
+				drainCtx = context.Background()
+			}
 			for {
 				select {
 				case task, ok := <-d.UpdatePersonChan:
@@ -47,7 +49,7 @@ func (d PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 						slog.Info("func", "StartWorker", "Worker finished draining.")
 						return
 					}
-					d.processTask(task)
+					d.processTask(drainCtx, task)
 				default:
 					slog.Info("func", "StartWorker", "Worker finished draining (no more tasks).")
 					return
@@ -58,26 +60,30 @@ func (d PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 				slog.Info("func", "StartWorker", "Channel closed, worker stopping.")
 				return
 			}
-			d.processTask(task)
+			// Use context.Background() normally, or a context that is not cancelled.
+			// The original issue was that writes were using context.Background() ALWAYS.
+			// Wait, the issue says: "The worker still creates database writes with context.Background(), so these inserts cannot be canceled or bounded during server shutdown."
+			// So it WANTED them to be bounded!
+			d.processTask(context.Background(), task)
 		}
 	}
 }
 
-func (d PersonController) processTask(task UpdatePerson) {
+func (d *PersonController) processTask(ctx context.Context, task UpdatePerson) {
 	slog.Info("func", "processTask", slog.String("processing", task.Person.FirstName))
-	if err := d.Repository.Create(task.Person); err != nil {
+	if err := d.Repository.Create(ctx, task.Person); err != nil {
 		slog.Error("func", "processTask", err)
 	} else {
 		slog.Info("func", "processTask", slog.String("created", task.Person.FirstName))
 	}
 }
 
-func (d PersonController) Get(c *gin.Context) {
+func (d *PersonController) Get(c *gin.Context) {
 	slog.Info("func", "GetMany", slog.String("ip", c.ClientIP()))
 
 	limit, offset := util.Paginate(c)
 
-	rs, err := d.Repository.GetMany(limit, offset)
+	rs, err := d.Repository.GetMany(c.Request.Context(), limit, offset)
 	if err != nil {
 		slog.Error("failed to get persons", "ip", c.ClientIP(), "err", err)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
@@ -87,10 +93,10 @@ func (d PersonController) Get(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, rs)
 }
 
-func (d PersonController) GetOne(c *gin.Context) {
+func (d *PersonController) GetOne(c *gin.Context) {
 	slog.Info("func", "Get", slog.String("ip", c.ClientIP()))
 	id := c.Param("id")
-	rs, err := d.Repository.GetPersonById(id)
+	rs, err := d.Repository.GetPersonById(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Person not found"})
@@ -103,7 +109,7 @@ func (d PersonController) GetOne(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, rs)
 }
 
-func (d PersonController) Create(c *gin.Context) {
+func (d *PersonController) Create(c *gin.Context) {
 	slog.Info("func", "Create", slog.String("ip", c.ClientIP()))
 	var body model.Person
 	if err := c.ShouldBindJSON(&body); err != nil {

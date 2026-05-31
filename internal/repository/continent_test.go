@@ -26,7 +26,7 @@ func TestContinentRepository_GetContinentByCode(t *testing.T) {
 		WithArgs(code).
 		WillReturnRows(rows)
 
-	res, err := repo.GetContinentByCode(code)
+	res, err := repo.GetContinentByCode(t.Context(), code)
 	assert.NoError(t, err)
 	assert.Equal(t, code, res.Code)
 	assert.Equal(t, name, res.Name)
@@ -50,7 +50,7 @@ func TestContinentRepository_GetContinentByCode_NotFound(t *testing.T) {
 		WithArgs(code).
 		WillReturnError(sql.ErrNoRows)
 
-	_, err = repo.GetContinentByCode(code)
+	_, err = repo.GetContinentByCode(t.Context(), code)
 	assert.Error(t, err)
 	assert.Equal(t, sql.ErrNoRows, err)
 }
@@ -73,7 +73,7 @@ func TestContinentRepository_GetMany(t *testing.T) {
 		WithArgs(limit, offset).
 		WillReturnRows(rows)
 
-	res, err := repo.GetMany(limit, offset)
+	res, err := repo.GetMany(t.Context(), limit, offset)
 	assert.NoError(t, err)
 	assert.Len(t, res, 2)
 	assert.Equal(t, "AF", res[0].Code)

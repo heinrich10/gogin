@@ -36,7 +36,11 @@ func main() {
 	ctx, cancelWorker := context.WithCancel(context.Background())
 	defer cancelWorker()
 
-	router, updatePersonChan := app.NewRouter(ctx, &wg, db, cfg)
+	// Let's create a background context that we can cancel later for shutdown.
+	shutdownCtx, cancelShutdown := context.WithCancel(context.Background())
+	defer cancelShutdown()
+
+	router, updatePersonChan := app.NewRouter(ctx, shutdownCtx, &wg, db, cfg)
 
 	if err := router.SetTrustedProxies(cfg.TRUSTED_PROXIES); err != nil {
 		logger.Error("Failed to set trusted proxies", "error", err)
@@ -63,9 +67,20 @@ func main() {
 	logger.Info("Shutdown requested")
 
 	// Graceful shutdown with timeout.
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
+	srvShutdownCtx, cancelSrv := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelSrv()
+
+	// Start draining the worker using srvShutdownCtx.
+	// We can't swap the context in personController, but we can make shutdownCtx
+	// a context that we cancel, and StartWorker uses ShutdownCtx during draining.
+	// If we want it bounded, we should have used a context that can be timed out.
+	// Let's just cancel it after 5 seconds too.
+	go func() {
+		<-srvShutdownCtx.Done()
+		cancelShutdown()
+	}()
+
+	if err := srv.Shutdown(srvShutdownCtx); err != nil {
 		logger.Error("Shutdown server", "error", err)
 	} else {
 		logger.Info("Server shutdown complete")
@@ -73,6 +88,7 @@ func main() {
 
 	close(updatePersonChan)
 	cancelWorker()
+
 	wg.Wait()
 
 	logger.Info("exiting")
