@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gogin/internal/app"
+	"gogin/internal/config"
 	"gogin/internal/lib"
 	"gogin/internal/model"
 
@@ -43,7 +44,8 @@ func TestAPI(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	router, updateChan := app.NewRouter(db)
+	cfg := config.LoadConfig()
+	router, updateChan := app.NewRouter(db, cfg)
 	defer func() {
 		close(updateChan)
 		time.Sleep(100 * time.Millisecond)
