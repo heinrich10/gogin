@@ -36,7 +36,7 @@ func main() {
 	ctx, cancelWorker := context.WithCancel(context.Background())
 	defer cancelWorker()
 
-	router, updatePersonChan := app.NewRouter(ctx, &wg, db)
+	router, updatePersonChan := app.NewRouter(ctx, &wg, db, cfg)
 
 	if err := router.SetTrustedProxies(cfg.TRUSTED_PROXIES); err != nil {
 		logger.Error("Failed to set trusted proxies", "error", err)

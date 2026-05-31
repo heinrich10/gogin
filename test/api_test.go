@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gogin/internal/app"
+	"gogin/internal/config"
 	"gogin/internal/lib"
 	"gogin/internal/model"
 
@@ -49,7 +50,8 @@ func TestAPI(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	router, updateChan := app.NewRouter(ctx, &wg, db)
+	cfg := config.LoadConfig()
+	router, updateChan := app.NewRouter(ctx, &wg, db, cfg)
 	defer func() {
 		close(updateChan)
 		cancel()
@@ -258,6 +260,12 @@ func TestAPI(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			router.ServeHTTP(w, req)
 			require.Equal(t, http.StatusAccepted, w.Code)
+
+			// Force worker to process by closing and waiting
+			// But we can't close updateChan here because it's used by other tests.
+			// Actually, TestAPI is one big test with subtests using the same router and channel.
+			// So we still need to poll OR we should have used separate routers.
+			// Given the current structure, polling is safer than closing the shared channel.
 
 			var found bool
 			for i := 0; i < 20; i++ {

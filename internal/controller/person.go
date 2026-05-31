@@ -23,13 +23,19 @@ type PersonController struct {
 }
 
 func (d PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
-	defer wg.Done()
+	if wg != nil {
+		defer wg.Done()
+	}
 	slog.Info("func", "StartPersonWorker", "Starting person worker...")
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
 			slog.Info("func", "StartWorker", "Context cancelled, draining channel...")
-			// Drain the remaining tasks in the channel
 			for task := range d.UpdatePersonChan {
 				d.processTask(task)
 			}

@@ -16,7 +16,7 @@ import (
 // NewRouter builds a fully wired Gin engine with all controllers and routes.
 // It also returns the UpdatePerson channel so the caller can manage its
 // lifecycle (e.g. close it on shutdown).
-func NewRouter(ctx context.Context, wg *sync.WaitGroup, db *sql.DB) (*gin.Engine, chan controller.UpdatePerson) {
+func NewRouter(ctx context.Context, wg *sync.WaitGroup, db *sql.DB, cfg *config.Config) (*gin.Engine, chan controller.UpdatePerson) {
 	continentRepository := repository.ContinentRepository{Db: db}
 	countryRepository := repository.CountryRepository{Db: db}
 	personRepository := repository.PersonRepository{Db: db}
@@ -35,9 +35,18 @@ func NewRouter(ctx context.Context, wg *sync.WaitGroup, db *sql.DB) (*gin.Engine
 		UpdatePersonChan: updatePersonChan,
 	}
 
-	wg.Add(1)
+	if wg != nil {
+		wg.Add(1)
+	}
 	go personController.StartWorker(ctx, wg)
-	cfg := config.LoadConfig()
+
+	allowCredentials := true
+	for _, origin := range cfg.ALLOWED_ORIGINS {
+		if origin == "*" {
+			allowCredentials = false
+			break
+		}
+	}
 
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
@@ -45,7 +54,7 @@ func NewRouter(ctx context.Context, wg *sync.WaitGroup, db *sql.DB) (*gin.Engine
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
+		AllowCredentials: allowCredentials,
 		MaxAge:           12 * time.Hour,
 	}))
 
