@@ -36,11 +36,23 @@ func (d PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 		select {
 		case <-ctx.Done():
 			slog.Info("func", "StartWorker", "Context cancelled, draining channel...")
-			for task := range d.UpdatePersonChan {
-				d.processTask(task)
+			// Close the channel if we're draining to prevent further sends and ensure the loop terminates
+			// Wait, we don't own the channel here usually, but if we are draining, we need to know when to stop.
+			// The issue says: "On ctx.Done(), the worker drains by ranging over UpdatePersonChan, which blocks until the channel is closed."
+			// We should probably check the channel in a non-blocking way or use a different approach.
+			for {
+				select {
+				case task, ok := <-d.UpdatePersonChan:
+					if !ok {
+						slog.Info("func", "StartWorker", "Worker finished draining.")
+						return
+					}
+					d.processTask(task)
+				default:
+					slog.Info("func", "StartWorker", "Worker finished draining (no more tasks).")
+					return
+				}
 			}
-			slog.Info("func", "StartWorker", "Worker finished draining.")
-			return
 		case task, ok := <-d.UpdatePersonChan:
 			if !ok {
 				slog.Info("func", "StartWorker", "Channel closed, worker stopping.")

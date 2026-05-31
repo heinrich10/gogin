@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pressly/goose/v3"
@@ -48,15 +47,16 @@ func TestAPI(t *testing.T) {
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
+	// Use t.Cleanup for more reliable cleanup
+	t.Cleanup(func() {
+		cancel()
+		wg.Wait()
+	})
 
 	cfg := config.LoadConfig()
 	router, updateChan := app.NewRouter(ctx, &wg, db, cfg)
-	defer func() {
-		close(updateChan)
-		cancel()
-		wg.Wait()
-	}()
+	_ = updateChan // explicitly use or ignore to satisfy compiler
+	// No defer close(updateChan) here, we will manage it per subtest if needed or let the worker drain on ctx.Done()
 
 	t.Run("continents", func(t *testing.T) {
 		t.Run("list default pagination", func(t *testing.T) {
@@ -261,30 +261,23 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 			require.Equal(t, http.StatusAccepted, w.Code)
 
-			// Force worker to process by closing and waiting
-			// But we can't close updateChan here because it's used by other tests.
-			// Actually, TestAPI is one big test with subtests using the same router and channel.
-			// So we still need to poll OR we should have used separate routers.
-			// Given the current structure, polling is safer than closing the shared channel.
+			// Drain the worker via context cancellation
+			cancel()
+			wg.Wait()
 
+			// After worker finishes, check the DB
+			w = httptest.NewRecorder()
+			req, _ = http.NewRequest(http.MethodGet, "/persons/?limit=100", nil)
+			router.ServeHTTP(w, req)
+
+			var persons []model.Person
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &persons))
 			var found bool
-			for i := 0; i < 20; i++ {
-				w := httptest.NewRecorder()
-				req, _ := http.NewRequest(http.MethodGet, "/persons/?limit=100", nil)
-				router.ServeHTTP(w, req)
-
-				var persons []model.Person
-				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &persons))
-				for _, p := range persons {
-					if p.FirstName == "AsyncWorker" && p.LastName == "Isolation" {
-						found = true
-						break
-					}
-				}
-				if found {
+			for _, p := range persons {
+				if p.FirstName == "AsyncWorker" && p.LastName == "Isolation" {
+					found = true
 					break
 				}
-				time.Sleep(50 * time.Millisecond)
 			}
 			assert.True(t, found, "async worker should insert the new person")
 		})

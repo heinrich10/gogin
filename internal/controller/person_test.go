@@ -183,7 +183,7 @@ func TestPersonController_Create(t *testing.T) {
 
 func TestPersonController_StartWorker(t *testing.T) {
 	mockRepo := new(MockPersonRepository)
-	updateChan := make(chan UpdatePerson)
+	updateChan := make(chan UpdatePerson, 1) // Buffered to avoid blocking
 	ctrl := PersonController{
 		Repository:       mockRepo,
 		UpdatePersonChan: updateChan,
@@ -199,11 +199,10 @@ func TestPersonController_StartWorker(t *testing.T) {
 
 	updateChan <- UpdatePerson{Person: person}
 
-	// Give some time for worker to process
-	time.Sleep(50 * time.Millisecond)
-
-	cancel()
+	// Wait for worker to finish processing and draining
 	close(updateChan)
 	wg.Wait()
+	cancel() // Cleanup context as well
+
 	mockRepo.AssertExpectations(t)
 }
