@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"gogin/internal/config"
 	"gogin/internal/lib"
 	"log/slog"
 	"os"
@@ -20,9 +21,10 @@ func migrationsDir(logger *slog.Logger) string {
 }
 
 func main() {
+	cfg := config.LoadConfig()
 	logger := slog.Default()
 
-	db, err := lib.GetConnection()
+	db, err := lib.GetConnection(cfg)
 	if err != nil {
 		logger.Error("failed to get database connection", slog.Any("error", err))
 		os.Exit(1)

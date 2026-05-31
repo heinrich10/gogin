@@ -19,7 +19,7 @@ func main() {
 	logger := slog.Default()
 
 	logger.Info("func", "main", "Starting...")
-	db, err := lib.GetConnection()
+	db, err := lib.GetConnection(cfg)
 	if err != nil {
 		logger.Error("Failed to connect to database", "error", err)
 		return

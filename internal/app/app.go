@@ -25,7 +25,7 @@ func NewRouter(db *sql.DB) (*gin.Engine, chan controller.UpdatePerson) {
 		Repository: &countryRepository,
 	}
 
-	updatePersonChan := make(chan controller.UpdatePerson)
+	updatePersonChan := make(chan controller.UpdatePerson, 100)
 	personController := controller.PersonController{
 		Repository:       &personRepository,
 		UpdatePersonChan: updatePersonChan,
