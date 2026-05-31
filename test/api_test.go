@@ -54,7 +54,7 @@ func TestAPI(t *testing.T) {
 	})
 
 	cfg := config.LoadConfig()
-	router, updateChan := app.NewRouter(ctx, &wg, db, cfg)
+	router, updateChan := app.NewRouter(ctx, context.Background(), &wg, db, cfg)
 	_ = updateChan // explicitly use or ignore to satisfy compiler
 	// No defer close(updateChan) here, we will manage it per subtest if needed or let the worker drain on ctx.Done()
 

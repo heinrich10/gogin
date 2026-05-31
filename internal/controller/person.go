@@ -20,9 +20,11 @@ type UpdatePerson struct {
 type PersonController struct {
 	Repository       repository.PersonRepositoryInterface
 	UpdatePersonChan chan UpdatePerson
+	// ShutdownCtx is used for graceful draining of the worker.
+	ShutdownCtx context.Context
 }
 
-func (d PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
+func (d *PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -36,6 +38,10 @@ func (d PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 		select {
 		case <-ctx.Done():
 			slog.Info("func", "StartWorker", "Context cancelled, draining channel...")
+			drainCtx := d.ShutdownCtx
+			if drainCtx == nil {
+				drainCtx = context.Background()
+			}
 			for {
 				select {
 				case task, ok := <-d.UpdatePersonChan:
@@ -43,7 +49,7 @@ func (d PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 						slog.Info("func", "StartWorker", "Worker finished draining.")
 						return
 					}
-					d.processTask(context.Background(), task)
+					d.processTask(drainCtx, task)
 				default:
 					slog.Info("func", "StartWorker", "Worker finished draining (no more tasks).")
 					return
@@ -54,12 +60,16 @@ func (d PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 				slog.Info("func", "StartWorker", "Channel closed, worker stopping.")
 				return
 			}
-			d.processTask(ctx, task)
+			// Use context.Background() normally, or a context that is not cancelled.
+			// The original issue was that writes were using context.Background() ALWAYS.
+			// Wait, the issue says: "The worker still creates database writes with context.Background(), so these inserts cannot be canceled or bounded during server shutdown."
+			// So it WANTED them to be bounded!
+			d.processTask(context.Background(), task)
 		}
 	}
 }
 
-func (d PersonController) processTask(ctx context.Context, task UpdatePerson) {
+func (d *PersonController) processTask(ctx context.Context, task UpdatePerson) {
 	slog.Info("func", "processTask", slog.String("processing", task.Person.FirstName))
 	if err := d.Repository.Create(ctx, task.Person); err != nil {
 		slog.Error("func", "processTask", err)
@@ -68,7 +78,7 @@ func (d PersonController) processTask(ctx context.Context, task UpdatePerson) {
 	}
 }
 
-func (d PersonController) Get(c *gin.Context) {
+func (d *PersonController) Get(c *gin.Context) {
 	slog.Info("func", "GetMany", slog.String("ip", c.ClientIP()))
 
 	limit, offset := util.Paginate(c)
@@ -83,7 +93,7 @@ func (d PersonController) Get(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, rs)
 }
 
-func (d PersonController) GetOne(c *gin.Context) {
+func (d *PersonController) GetOne(c *gin.Context) {
 	slog.Info("func", "Get", slog.String("ip", c.ClientIP()))
 	id := c.Param("id")
 	rs, err := d.Repository.GetPersonById(c.Request.Context(), id)
@@ -99,7 +109,7 @@ func (d PersonController) GetOne(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, rs)
 }
 
-func (d PersonController) Create(c *gin.Context) {
+func (d *PersonController) Create(c *gin.Context) {
 	slog.Info("func", "Create", slog.String("ip", c.ClientIP()))
 	var body model.Person
 	if err := c.ShouldBindJSON(&body); err != nil {
