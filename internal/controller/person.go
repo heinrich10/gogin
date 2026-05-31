@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"gogin/internal/model"
@@ -24,7 +25,7 @@ func (d PersonController) StartWorker() {
 	slog.Info("func", "StartPersonWorker", "Starting person worker...")
 	for task := range d.UpdatePersonChan {
 		slog.Info("func", "StartWorker", slog.String("processing", task.Person.FirstName))
-		if err := d.Repository.Create(task.Person); err != nil {
+		if err := d.Repository.Create(context.Background(), task.Person); err != nil {
 			slog.Error("func", "StartWorker", err)
 		} else {
 			slog.Info("func", "StartWorker", slog.String("created", task.Person.FirstName))
@@ -37,7 +38,7 @@ func (d PersonController) Get(c *gin.Context) {
 
 	limit, offset := util.Paginate(c)
 
-	rs, err := d.Repository.GetMany(limit, offset)
+	rs, err := d.Repository.GetMany(c.Request.Context(), limit, offset)
 	if err != nil {
 		slog.Error("failed to get persons", "ip", c.ClientIP(), "err", err)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
@@ -50,7 +51,7 @@ func (d PersonController) Get(c *gin.Context) {
 func (d PersonController) GetOne(c *gin.Context) {
 	slog.Info("func", "Get", slog.String("ip", c.ClientIP()))
 	id := c.Param("id")
-	rs, err := d.Repository.GetPersonById(id)
+	rs, err := d.Repository.GetPersonById(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Person not found"})

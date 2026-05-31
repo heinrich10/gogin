@@ -1,24 +1,25 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"gogin/internal/model"
 	"log/slog"
 )
 
 type PersonRepositoryInterface interface {
-	GetPersonById(id string) (model.Person, error)
-	GetMany(limit, offset int) ([]model.Person, error)
-	Create(body model.Person) error
+	GetPersonById(ctx context.Context, id string) (model.Person, error)
+	GetMany(ctx context.Context, limit, offset int) ([]model.Person, error)
+	Create(ctx context.Context, body model.Person) error
 }
 
 type PersonRepository struct {
 	Db *sql.DB
 }
 
-func (r PersonRepository) GetPersonById(id string) (model.Person, error) {
+func (r PersonRepository) GetPersonById(ctx context.Context, id string) (model.Person, error) {
 	var person model.Person
-	if err := r.Db.QueryRow(
+	if err := r.Db.QueryRowContext(ctx,
 		"SELECT id, first_name, last_name, country_code, updated_at, created_at "+
 			"FROM person WHERE id = ?", id,
 	).Scan(
@@ -29,8 +30,8 @@ func (r PersonRepository) GetPersonById(id string) (model.Person, error) {
 	return person, nil
 }
 
-func (r PersonRepository) GetMany(limit, offset int) ([]model.Person, error) {
-	rows, err := r.Db.Query(
+func (r PersonRepository) GetMany(ctx context.Context, limit, offset int) ([]model.Person, error) {
+	rows, err := r.Db.QueryContext(ctx,
 		"SELECT id, first_name, last_name, country_code "+
 			"FROM person LIMIT ? OFFSET ?", limit, offset,
 	)
@@ -60,8 +61,8 @@ func (r PersonRepository) GetMany(limit, offset int) ([]model.Person, error) {
 	return persons, nil
 }
 
-func (r PersonRepository) Create(body model.Person) error {
-	_, err := r.Db.Exec(
+func (r PersonRepository) Create(ctx context.Context, body model.Person) error {
+	_, err := r.Db.ExecContext(ctx,
 		"INSERT INTO "+
 			"person (first_name, last_name, country_code, updated_at, created_at) "+
 			"VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",

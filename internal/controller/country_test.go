@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -19,13 +20,13 @@ type MockCountryRepository struct {
 	mock.Mock
 }
 
-func (m *MockCountryRepository) GetCountryByCode(code string) (model.Country, error) {
-	args := m.Called(code)
+func (m *MockCountryRepository) GetCountryByCode(ctx context.Context, code string) (model.Country, error) {
+	args := m.Called(ctx, code)
 	return args.Get(0).(model.Country), args.Error(1)
 }
 
-func (m *MockCountryRepository) GetMany(limit, offset int) ([]model.Country, error) {
-	args := m.Called(limit, offset)
+func (m *MockCountryRepository) GetMany(ctx context.Context, limit, offset int) ([]model.Country, error) {
+	args := m.Called(ctx, limit, offset)
 	return args.Get(0).([]model.Country), args.Error(1)
 }
 
@@ -41,7 +42,7 @@ func TestCountryController_Get(t *testing.T) {
 			{Code: "CA", Name: "Canada"},
 		}
 
-		mockRepo.On("GetMany", 10, 0).Return(countries, nil)
+		mockRepo.On("GetMany", mock.Anything, 10, 0).Return(countries, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -61,7 +62,7 @@ func TestCountryController_Get(t *testing.T) {
 		mockRepo := new(MockCountryRepository)
 		ctrl := CountryController{Repository: mockRepo}
 
-		mockRepo.On("GetMany", 10, 0).Return([]model.Country{}, errors.New("db error"))
+		mockRepo.On("GetMany", mock.Anything, 10, 0).Return([]model.Country{}, errors.New("db error"))
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -82,7 +83,7 @@ func TestCountryController_GetOne(t *testing.T) {
 		ctrl := CountryController{Repository: mockRepo}
 
 		country := model.Country{Code: "US", Name: "United States"}
-		mockRepo.On("GetCountryByCode", "US").Return(country, nil)
+		mockRepo.On("GetCountryByCode", mock.Anything, "US").Return(country, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -103,7 +104,7 @@ func TestCountryController_GetOne(t *testing.T) {
 		mockRepo := new(MockCountryRepository)
 		ctrl := CountryController{Repository: mockRepo}
 
-		mockRepo.On("GetCountryByCode", "XX").Return(model.Country{}, sql.ErrNoRows)
+		mockRepo.On("GetCountryByCode", mock.Anything, "XX").Return(model.Country{}, sql.ErrNoRows)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -120,7 +121,7 @@ func TestCountryController_GetOne(t *testing.T) {
 		mockRepo := new(MockCountryRepository)
 		ctrl := CountryController{Repository: mockRepo}
 
-		mockRepo.On("GetCountryByCode", "US").Return(model.Country{}, errors.New("db error"))
+		mockRepo.On("GetCountryByCode", mock.Anything, "US").Return(model.Country{}, errors.New("db error"))
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)

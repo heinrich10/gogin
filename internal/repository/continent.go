@@ -1,31 +1,32 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"gogin/internal/model"
 	"log/slog"
 )
 
 type ContinentRepositoryInterface interface {
-	GetContinentByCode(code string) (model.Continent, error)
-	GetMany(limit, offset int) ([]model.Continent, error)
+	GetContinentByCode(ctx context.Context, code string) (model.Continent, error)
+	GetMany(ctx context.Context, limit, offset int) ([]model.Continent, error)
 }
 
 type ContinentRepository struct {
 	Db *sql.DB
 }
 
-func (r ContinentRepository) GetContinentByCode(code string) (model.Continent, error) {
+func (r ContinentRepository) GetContinentByCode(ctx context.Context, code string) (model.Continent, error) {
 	var continent model.Continent
-	if err := r.Db.QueryRow("SELECT code, name FROM continent WHERE code = ?", code).
+	if err := r.Db.QueryRowContext(ctx, "SELECT code, name FROM continent WHERE code = ?", code).
 		Scan(&continent.Code, &continent.Name); err != nil {
 		return model.Continent{}, err
 	}
 	return continent, nil
 }
 
-func (r ContinentRepository) GetMany(limit, offset int) ([]model.Continent, error) {
-	rows, err := r.Db.Query("SELECT code, name FROM continent ORDER BY code LIMIT ? OFFSET ?", limit, offset)
+func (r ContinentRepository) GetMany(ctx context.Context, limit, offset int) ([]model.Continent, error) {
+	rows, err := r.Db.QueryContext(ctx, "SELECT code, name FROM continent ORDER BY code LIMIT ? OFFSET ?", limit, offset)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -19,13 +20,13 @@ type MockContinentRepository struct {
 	mock.Mock
 }
 
-func (m *MockContinentRepository) GetContinentByCode(code string) (model.Continent, error) {
-	args := m.Called(code)
+func (m *MockContinentRepository) GetContinentByCode(ctx context.Context, code string) (model.Continent, error) {
+	args := m.Called(ctx, code)
 	return args.Get(0).(model.Continent), args.Error(1)
 }
 
-func (m *MockContinentRepository) GetMany(limit, offset int) ([]model.Continent, error) {
-	args := m.Called(limit, offset)
+func (m *MockContinentRepository) GetMany(ctx context.Context, limit, offset int) ([]model.Continent, error) {
+	args := m.Called(ctx, limit, offset)
 	return args.Get(0).([]model.Continent), args.Error(1)
 }
 
@@ -41,7 +42,7 @@ func TestContinentController_Get(t *testing.T) {
 			{Code: "AN", Name: "Antarctica"},
 		}
 
-		mockRepo.On("GetMany", 10, 0).Return(continents, nil)
+		mockRepo.On("GetMany", mock.Anything, 10, 0).Return(continents, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -61,7 +62,7 @@ func TestContinentController_Get(t *testing.T) {
 		mockRepo := new(MockContinentRepository)
 		ctrl := ContinentController{Repository: mockRepo}
 
-		mockRepo.On("GetMany", 10, 0).Return([]model.Continent{}, errors.New("db error"))
+		mockRepo.On("GetMany", mock.Anything, 10, 0).Return([]model.Continent{}, errors.New("db error"))
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -82,7 +83,7 @@ func TestContinentController_GetOne(t *testing.T) {
 		ctrl := ContinentController{Repository: mockRepo}
 
 		continent := model.Continent{Code: "AF", Name: "Africa"}
-		mockRepo.On("GetContinentByCode", "AF").Return(continent, nil)
+		mockRepo.On("GetContinentByCode", mock.Anything, "AF").Return(continent, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -103,7 +104,7 @@ func TestContinentController_GetOne(t *testing.T) {
 		mockRepo := new(MockContinentRepository)
 		ctrl := ContinentController{Repository: mockRepo}
 
-		mockRepo.On("GetContinentByCode", "XX").Return(model.Continent{}, sql.ErrNoRows)
+		mockRepo.On("GetContinentByCode", mock.Anything, "XX").Return(model.Continent{}, sql.ErrNoRows)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -120,7 +121,7 @@ func TestContinentController_GetOne(t *testing.T) {
 		mockRepo := new(MockContinentRepository)
 		ctrl := ContinentController{Repository: mockRepo}
 
-		mockRepo.On("GetContinentByCode", "AF").Return(model.Continent{}, errors.New("db error"))
+		mockRepo.On("GetContinentByCode", mock.Anything, "AF").Return(model.Continent{}, errors.New("db error"))
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
