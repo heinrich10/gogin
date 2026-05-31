@@ -3,7 +3,7 @@ package controller
 import (
 	"database/sql"
 	"errors"
-	"gogin/internal/repository"
+	"gogin/internal/service"
 	"gogin/internal/util"
 	"net/http"
 
@@ -13,7 +13,7 @@ import (
 )
 
 type ContinentController struct {
-	Repository repository.ContinentRepositoryInterface
+	Service service.ContinentServiceInterface
 }
 
 func (d ContinentController) Get(c *gin.Context) {
@@ -21,7 +21,7 @@ func (d ContinentController) Get(c *gin.Context) {
 
 	limit, offset := util.Paginate(c)
 
-	rs, err := d.Repository.GetMany(c.Request.Context(), limit, offset)
+	rs, err := d.Service.GetMany(c.Request.Context(), limit, offset)
 	if err != nil {
 		slog.Error("failed to get continents", "ip", c.ClientIP(), "err", err)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
@@ -34,7 +34,7 @@ func (d ContinentController) Get(c *gin.Context) {
 func (d ContinentController) GetOne(c *gin.Context) {
 	slog.Info("func", "GetOne", slog.String("ip", c.ClientIP()))
 	id := c.Param("code")
-	rs, err := d.Repository.GetContinentByCode(c.Request.Context(), id)
+	rs, err := d.Service.GetContinentByCode(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Continent not found"})
