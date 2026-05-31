@@ -31,7 +31,7 @@ func main() {
 		}
 	}()
 
-	router, updatePersonChan := app.NewRouter(db)
+	router, updatePersonChan := app.NewRouter(db, cfg)
 
 	if err := router.SetTrustedProxies(cfg.TRUSTED_PROXIES); err != nil {
 		logger.Error("Failed to set trusted proxies", "error", err)

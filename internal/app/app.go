@@ -2,8 +2,10 @@ package app
 
 import (
 	"database/sql"
+	"gogin/internal/config"
 	"gogin/internal/controller"
 	"gogin/internal/repository"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -12,7 +14,7 @@ import (
 // NewRouter builds a fully wired Gin engine with all controllers and routes.
 // It also returns the UpdatePerson channel so the caller can manage its
 // lifecycle (e.g. close it on shutdown).
-func NewRouter(db *sql.DB) (*gin.Engine, chan controller.UpdatePerson) {
+func NewRouter(db *sql.DB, cfg *config.Config) (*gin.Engine, chan controller.UpdatePerson) {
 	continentRepository := repository.ContinentRepository{Db: db}
 	countryRepository := repository.CountryRepository{Db: db}
 	personRepository := repository.PersonRepository{Db: db}
@@ -33,8 +35,23 @@ func NewRouter(db *sql.DB) (*gin.Engine, chan controller.UpdatePerson) {
 
 	go personController.StartWorker()
 
+	allowCredentials := true
+	for _, origin := range cfg.ALLOWED_ORIGINS {
+		if origin == "*" {
+			allowCredentials = false
+			break
+		}
+	}
+
 	router := gin.Default()
-	router.Use(cors.Default())
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     cfg.ALLOWED_ORIGINS,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: allowCredentials,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	{
 		continentGroup := router.Group("/continents")
