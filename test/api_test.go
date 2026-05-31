@@ -2,13 +2,14 @@ package api_test
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pressly/goose/v3"
@@ -16,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gogin/internal/app"
+	"gogin/internal/config"
 	"gogin/internal/lib"
 	"gogin/internal/model"
 
@@ -43,11 +45,18 @@ func TestAPI(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	router, updateChan := app.NewRouter(db)
-	defer func() {
-		close(updateChan)
-		time.Sleep(100 * time.Millisecond)
-	}()
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(t.Context())
+	// Use t.Cleanup for more reliable cleanup
+	t.Cleanup(func() {
+		cancel()
+		wg.Wait()
+	})
+
+	cfg := config.LoadConfig()
+	router, updateChan := app.NewRouter(ctx, &wg, db, cfg)
+	_ = updateChan // explicitly use or ignore to satisfy compiler
+	// No defer close(updateChan) here, we will manage it per subtest if needed or let the worker drain on ctx.Done()
 
 	t.Run("continents", func(t *testing.T) {
 		t.Run("list default pagination", func(t *testing.T) {
@@ -252,24 +261,23 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 			require.Equal(t, http.StatusAccepted, w.Code)
 
-			var found bool
-			for i := 0; i < 20; i++ {
-				w := httptest.NewRecorder()
-				req, _ := http.NewRequest(http.MethodGet, "/persons/?limit=100", nil)
-				router.ServeHTTP(w, req)
+			// Drain the worker via context cancellation
+			cancel()
+			wg.Wait()
 
-				var persons []model.Person
-				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &persons))
-				for _, p := range persons {
-					if p.FirstName == "AsyncWorker" && p.LastName == "Isolation" {
-						found = true
-						break
-					}
-				}
-				if found {
+			// After worker finishes, check the DB
+			w = httptest.NewRecorder()
+			req, _ = http.NewRequest(http.MethodGet, "/persons/?limit=100", nil)
+			router.ServeHTTP(w, req)
+
+			var persons []model.Person
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &persons))
+			var found bool
+			for _, p := range persons {
+				if p.FirstName == "AsyncWorker" && p.LastName == "Isolation" {
+					found = true
 					break
 				}
-				time.Sleep(50 * time.Millisecond)
 			}
 			assert.True(t, found, "async worker should insert the new person")
 		})
@@ -283,7 +291,40 @@ func TestAPI(t *testing.T) {
 			assert.Equal(t, http.StatusBadRequest, w.Code)
 			var result map[string]string
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Equal(t, "Invalid request body", result["error"])
+			assert.Contains(t, result["error"], "Invalid request body")
+		})
+
+		t.Run("missing required field returns bad request", func(t *testing.T) {
+			body, _ := json.Marshal(model.Person{
+				LastName:    "MissingFirst",
+				CountryCode: "JP",
+			})
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodPost, "/persons/", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+			var result map[string]any
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
+			assert.Contains(t, result["error"], "validation failed")
+		})
+
+		t.Run("invalid country code length returns bad request", func(t *testing.T) {
+			body, _ := json.Marshal(model.Person{
+				FirstName:   "Invalid",
+				LastName:    "Country",
+				CountryCode: "USA",
+			})
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodPost, "/persons/", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+			var result map[string]any
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
+			assert.Contains(t, result["error"], "validation failed")
 		})
 	})
 }

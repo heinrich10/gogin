@@ -8,6 +8,7 @@ import (
 	"gogin/internal/model"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -146,11 +147,43 @@ func TestPersonController_Create(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
+
+	t.Run("Validation Failure - Missing FirstName", func(t *testing.T) {
+		ctrl := PersonController{}
+
+		person := model.Person{LastName: "Doe", CountryCode: "US"}
+		body, _ := json.Marshal(person)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("POST", "/persons", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		ctrl.Create(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("Validation Failure - Invalid CountryCode", func(t *testing.T) {
+		ctrl := PersonController{}
+
+		person := model.Person{FirstName: "John", LastName: "Doe", CountryCode: "USA"}
+		body, _ := json.Marshal(person)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("POST", "/persons", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		ctrl.Create(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
 }
 
 func TestPersonController_StartWorker(t *testing.T) {
 	mockRepo := new(MockPersonRepository)
-	updateChan := make(chan UpdatePerson)
+	updateChan := make(chan UpdatePerson, 1) // Buffered to avoid blocking
 	ctrl := PersonController{
 		Repository:       mockRepo,
 		UpdatePersonChan: updateChan,
@@ -159,13 +192,17 @@ func TestPersonController_StartWorker(t *testing.T) {
 	person := model.Person{FirstName: "John", LastName: "Doe"}
 	mockRepo.On("Create", mock.Anything, person).Return(nil)
 
-	go ctrl.StartWorker()
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+	wg.Add(1)
+	go ctrl.StartWorker(ctx, &wg)
 
 	updateChan <- UpdatePerson{Person: person}
 
-	// Give some time for worker to process
-	time.Sleep(50 * time.Millisecond)
-
+	// Wait for worker to finish processing and draining
 	close(updateChan)
+	wg.Wait()
+	cancel() // Cleanup context as well
+
 	mockRepo.AssertExpectations(t)
 }
