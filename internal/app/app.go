@@ -2,8 +2,10 @@ package app
 
 import (
 	"database/sql"
+	"gogin/internal/config"
 	"gogin/internal/controller"
 	"gogin/internal/repository"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -32,9 +34,17 @@ func NewRouter(db *sql.DB) (*gin.Engine, chan controller.UpdatePerson) {
 	}
 
 	go personController.StartWorker()
+	cfg := config.LoadConfig()
 
 	router := gin.Default()
-	router.Use(cors.Default())
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     cfg.ALLOWED_ORIGINS,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	{
 		continentGroup := router.Group("/continents")
