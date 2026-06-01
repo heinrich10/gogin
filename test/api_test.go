@@ -65,9 +65,21 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
-			var result []model.Continent
+			var result struct {
+				Data []model.Continent `json:"data"`
+				Meta struct {
+					Page       int `json:"page"`
+					Limit      int `json:"limit"`
+					Total      int `json:"total"`
+					TotalPages int `json:"total_pages"`
+				} `json:"meta"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Len(t, result, 7)
+			assert.Len(t, result.Data, 7)
+			assert.Equal(t, 1, result.Meta.Page)
+			assert.Equal(t, 10, result.Meta.Limit)
+			assert.Equal(t, 7, result.Meta.Total)
+			assert.Equal(t, 1, result.Meta.TotalPages)
 		})
 
 		t.Run("list with limit", func(t *testing.T) {
@@ -76,12 +88,24 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
-			var result []model.Continent
+			var result struct {
+				Data []model.Continent `json:"data"`
+				Meta struct {
+					Page       int `json:"page"`
+					Limit      int `json:"limit"`
+					Total      int `json:"total"`
+					TotalPages int `json:"total_pages"`
+				} `json:"meta"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Len(t, result, 3)
-			assert.Equal(t, "AF", result[0].Code)
-			assert.Equal(t, "AN", result[1].Code)
-			assert.Equal(t, "AS", result[2].Code)
+			assert.Len(t, result.Data, 3)
+			assert.Equal(t, "AF", result.Data[0].Code)
+			assert.Equal(t, "AN", result.Data[1].Code)
+			assert.Equal(t, "AS", result.Data[2].Code)
+			assert.Equal(t, 1, result.Meta.Page)
+			assert.Equal(t, 3, result.Meta.Limit)
+			assert.Equal(t, 7, result.Meta.Total)
+			assert.Equal(t, 3, result.Meta.TotalPages)
 		})
 
 		t.Run("list with limit and page", func(t *testing.T) {
@@ -90,12 +114,22 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
-			var result []model.Continent
+			var result struct {
+				Data []model.Continent `json:"data"`
+				Meta struct {
+					Page       int `json:"page"`
+					Limit      int `json:"limit"`
+					Total      int `json:"total"`
+					TotalPages int `json:"total_pages"`
+				} `json:"meta"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Len(t, result, 3)
-			assert.Equal(t, "EU", result[0].Code)
-			assert.Equal(t, "NA", result[1].Code)
-			assert.Equal(t, "OC", result[2].Code)
+			assert.Len(t, result.Data, 3)
+			assert.Equal(t, "EU", result.Data[0].Code)
+			assert.Equal(t, "NA", result.Data[1].Code)
+			assert.Equal(t, "OC", result.Data[2].Code)
+			assert.Equal(t, 2, result.Meta.Page)
+			assert.Equal(t, 3, result.Meta.TotalPages)
 		})
 
 		t.Run("list limit over max", func(t *testing.T) {
@@ -104,9 +138,18 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
-			var result []model.Continent
+			var result struct {
+				Data []model.Continent `json:"data"`
+				Meta struct {
+					Page       int `json:"page"`
+					Limit      int `json:"limit"`
+					Total      int `json:"total"`
+					TotalPages int `json:"total_pages"`
+				} `json:"meta"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Len(t, result, 7)
+			assert.Len(t, result.Data, 7)
+			assert.Equal(t, 100, result.Meta.Limit)
 		})
 
 		t.Run("get one success", func(t *testing.T) {
@@ -127,9 +170,15 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusNotFound, w.Code)
-			var result map[string]string
+			var result struct {
+				Error struct {
+					Code    string `json:"code"`
+					Message string `json:"message"`
+				} `json:"error"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Equal(t, "Continent not found", result["error"])
+			assert.Equal(t, "ERR_NOT_FOUND", result.Error.Code)
+			assert.Equal(t, "Continent not found", result.Error.Message)
 		})
 	})
 
@@ -140,9 +189,20 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
-			var result []model.Country
+			var result struct {
+				Data []model.Country `json:"data"`
+				Meta struct {
+					Page       int `json:"page"`
+					Limit      int `json:"limit"`
+					Total      int `json:"total"`
+					TotalPages int `json:"total_pages"`
+				} `json:"meta"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Len(t, result, 10) // default limit
+			assert.Len(t, result.Data, 10) // default limit
+			assert.Equal(t, 1, result.Meta.Page)
+			assert.Equal(t, 10, result.Meta.Limit)
+			assert.Greater(t, result.Meta.Total, 0)
 		})
 
 		t.Run("list with pagination", func(t *testing.T) {
@@ -151,9 +211,19 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
-			var result []model.Country
+			var result struct {
+				Data []model.Country `json:"data"`
+				Meta struct {
+					Page       int `json:"page"`
+					Limit      int `json:"limit"`
+					Total      int `json:"total"`
+					TotalPages int `json:"total_pages"`
+				} `json:"meta"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Len(t, result, 2)
+			assert.Len(t, result.Data, 2)
+			assert.Equal(t, 1, result.Meta.Page)
+			assert.Equal(t, 2, result.Meta.Limit)
 		})
 
 		t.Run("get one success", func(t *testing.T) {
@@ -174,9 +244,15 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusNotFound, w.Code)
-			var result map[string]string
+			var result struct {
+				Error struct {
+					Code    string `json:"code"`
+					Message string `json:"message"`
+				} `json:"error"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Equal(t, "Country not found", result["error"])
+			assert.Equal(t, "ERR_NOT_FOUND", result.Error.Code)
+			assert.Equal(t, "Country not found", result.Error.Message)
 		})
 	})
 
@@ -187,9 +263,19 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
-			var result []model.Person
+			var result struct {
+				Data []model.Person `json:"data"`
+				Meta struct {
+					Page       int `json:"page"`
+					Limit      int `json:"limit"`
+					Total      int `json:"total"`
+					TotalPages int `json:"total_pages"`
+				} `json:"meta"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Len(t, result, 10) // default limit
+			assert.Len(t, result.Data, 10) // default limit
+			assert.Equal(t, 1, result.Meta.Page)
+			assert.Equal(t, 10, result.Meta.Limit)
 		})
 
 		t.Run("list with pagination", func(t *testing.T) {
@@ -198,9 +284,18 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
-			var result []model.Person
+			var result struct {
+				Data []model.Person `json:"data"`
+				Meta struct {
+					Page       int `json:"page"`
+					Limit      int `json:"limit"`
+					Total      int `json:"total"`
+					TotalPages int `json:"total_pages"`
+				} `json:"meta"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Len(t, result, 1)
+			assert.Len(t, result.Data, 1)
+			assert.Equal(t, 2, result.Meta.Page)
 		})
 
 		t.Run("get one success", func(t *testing.T) {
@@ -223,9 +318,15 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusNotFound, w.Code)
-			var result map[string]string
+			var result struct {
+				Error struct {
+					Code    string `json:"code"`
+					Message string `json:"message"`
+				} `json:"error"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Equal(t, "Person not found", result["error"])
+			assert.Equal(t, "ERR_NOT_FOUND", result.Error.Code)
+			assert.Equal(t, "Person not found", result.Error.Message)
 		})
 	})
 
@@ -270,10 +371,18 @@ func TestAPI(t *testing.T) {
 			req, _ = http.NewRequest(http.MethodGet, "/persons/?limit=100", nil)
 			router.ServeHTTP(w, req)
 
-			var persons []model.Person
-			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &persons))
+			var result struct {
+				Data []model.Person `json:"data"`
+				Meta struct {
+					Page       int `json:"page"`
+					Limit      int `json:"limit"`
+					Total      int `json:"total"`
+					TotalPages int `json:"total_pages"`
+				} `json:"meta"`
+			}
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
 			var found bool
-			for _, p := range persons {
+			for _, p := range result.Data {
 				if p.FirstName == "AsyncWorker" && p.LastName == "Isolation" {
 					found = true
 					break
@@ -289,9 +398,15 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusBadRequest, w.Code)
-			var result map[string]string
+			var result struct {
+				Error struct {
+					Code    string `json:"code"`
+					Message string `json:"message"`
+				} `json:"error"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Contains(t, result["error"], "Invalid request body")
+			assert.Equal(t, "ERR_BAD_REQUEST", result.Error.Code)
+			assert.Contains(t, result.Error.Message, "Invalid request body")
 		})
 
 		t.Run("missing required field returns bad request", func(t *testing.T) {
@@ -305,9 +420,15 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusBadRequest, w.Code)
-			var result map[string]any
+			var result struct {
+				Error struct {
+					Code    string `json:"code"`
+					Message string `json:"message"`
+				} `json:"error"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Contains(t, result["error"], "validation failed")
+			assert.Equal(t, "ERR_BAD_REQUEST", result.Error.Code)
+			assert.Contains(t, result.Error.Message, "validation failed")
 		})
 
 		t.Run("invalid country code length returns bad request", func(t *testing.T) {
@@ -322,9 +443,15 @@ func TestAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusBadRequest, w.Code)
-			var result map[string]any
+			var result struct {
+				Error struct {
+					Code    string `json:"code"`
+					Message string `json:"message"`
+				} `json:"error"`
+			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
-			assert.Contains(t, result["error"], "validation failed")
+			assert.Equal(t, "ERR_BAD_REQUEST", result.Error.Code)
+			assert.Contains(t, result.Error.Message, "validation failed")
 		})
 	})
 }

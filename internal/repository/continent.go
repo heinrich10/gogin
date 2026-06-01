@@ -10,6 +10,7 @@ import (
 type ContinentRepositoryInterface interface {
 	GetContinentByCode(ctx context.Context, code string) (model.Continent, error)
 	GetMany(ctx context.Context, limit, offset int) ([]model.Continent, error)
+	Count(ctx context.Context) (int, error)
 }
 
 type ContinentRepository struct {
@@ -50,4 +51,12 @@ func (r ContinentRepository) GetMany(ctx context.Context, limit, offset int) ([]
 	}
 
 	return continents, nil
+}
+
+func (r ContinentRepository) Count(ctx context.Context) (int, error) {
+	var count int
+	if err := r.Db.QueryRowContext(ctx, "SELECT COUNT(*) FROM continent").Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
 }

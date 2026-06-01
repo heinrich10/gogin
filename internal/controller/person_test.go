@@ -30,6 +30,7 @@ func TestPersonController_Get(t *testing.T) {
 		}
 
 		mockService.On("GetMany", mock.Anything, 10, 0).Return(persons, nil)
+		mockService.On("Count", mock.Anything).Return(42, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -38,10 +39,13 @@ func TestPersonController_Get(t *testing.T) {
 		ctrl.Get(c)
 
 		assert.Equal(t, http.StatusOK, w.Code)
-		var response []model.Person
+		var response ListResponse[model.Person]
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
-		assert.Equal(t, persons, response)
+		assert.Equal(t, persons, response.Data)
+		assert.Equal(t, 1, response.Meta.Page)
+		assert.Equal(t, 10, response.Meta.Limit)
+		assert.Equal(t, 42, response.Meta.Total)
 		mockService.AssertExpectations(t)
 	})
 }
@@ -85,6 +89,11 @@ func TestPersonController_GetOne(t *testing.T) {
 		ctrl.GetOne(c)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
+		var response ErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "ERR_NOT_FOUND", response.Error.Code)
+		assert.Equal(t, "Person not found", response.Error.Message)
 		mockService.AssertExpectations(t)
 	})
 }
@@ -123,6 +132,11 @@ func TestPersonController_Create(t *testing.T) {
 		ctrl.Create(c)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
+		var response ErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "ERR_BAD_REQUEST", response.Error.Code)
+		assert.Contains(t, response.Error.Message, "Invalid request body")
 	})
 
 	t.Run("Validation Failure - Missing FirstName", func(t *testing.T) {
@@ -139,6 +153,11 @@ func TestPersonController_Create(t *testing.T) {
 		ctrl.Create(c)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
+		var response ErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "ERR_BAD_REQUEST", response.Error.Code)
+		assert.Contains(t, response.Error.Message, "validation failed")
 	})
 
 	t.Run("Validation Failure - Invalid CountryCode", func(t *testing.T) {
@@ -155,6 +174,11 @@ func TestPersonController_Create(t *testing.T) {
 		ctrl.Create(c)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
+		var response ErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "ERR_BAD_REQUEST", response.Error.Code)
+		assert.Contains(t, response.Error.Message, "validation failed")
 	})
 }
 

@@ -48,3 +48,17 @@ func TestContinentService_GetContinentByCode(t *testing.T) {
 
 	mockRepo.AssertExpectations(t)
 }
+
+func TestContinentService_Count(t *testing.T) {
+	mockRepo := new(testutil.MockContinentRepository)
+	svc := &ContinentService{Repo: mockRepo}
+
+	ctx := context.Background()
+	mockRepo.On("Count", ctx).Return(7, nil)
+
+	result, err := svc.Count(ctx)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 7, result)
+	mockRepo.AssertExpectations(t)
+}

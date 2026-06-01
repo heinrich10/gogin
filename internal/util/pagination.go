@@ -7,14 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Paginate(c *gin.Context) (limit, offset int) {
+func Paginate(c *gin.Context) (limit, offset, page int) {
 	const (
 		defaultLimit = 10
 		defaultPage  = 1
 		maxLimit     = 100
 	)
 
-	var page int
 	limit = defaultLimit
 
 	if s := strings.TrimSpace(c.Query("limit")); s != "" {
@@ -46,5 +45,5 @@ func Paginate(c *gin.Context) (limit, offset int) {
 	if offset <= 0 {
 		offset = 0
 	}
-	return limit, offset
+	return limit, offset, page
 }

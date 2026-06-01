@@ -16,12 +16,14 @@ func TestPaginate(t *testing.T) {
 		queryParams    map[string]string
 		expectedLimit  int
 		expectedOffset int
+		expectedPage   int
 	}{
 		{
 			name:           "Default values",
 			queryParams:    map[string]string{},
 			expectedLimit:  10,
 			expectedOffset: 0,
+			expectedPage:   1,
 		},
 		{
 			name: "Custom limit and page",
@@ -31,6 +33,7 @@ func TestPaginate(t *testing.T) {
 			},
 			expectedLimit:  20,
 			expectedOffset: 20,
+			expectedPage:   2,
 		},
 		{
 			name: "Invalid limit and page",
@@ -40,6 +43,7 @@ func TestPaginate(t *testing.T) {
 			},
 			expectedLimit:  10,
 			expectedOffset: 0,
+			expectedPage:   1,
 		},
 		{
 			name: "Limit exceeds max",
@@ -48,6 +52,7 @@ func TestPaginate(t *testing.T) {
 			},
 			expectedLimit:  100,
 			expectedOffset: 0,
+			expectedPage:   1,
 		},
 		{
 			name: "Negative values",
@@ -57,6 +62,7 @@ func TestPaginate(t *testing.T) {
 			},
 			expectedLimit:  10,
 			expectedOffset: 0,
+			expectedPage:   1,
 		},
 	}
 
@@ -73,9 +79,10 @@ func TestPaginate(t *testing.T) {
 			req.URL.RawQuery = q.Encode()
 			c.Request = req
 
-			limit, offset := Paginate(c)
+			limit, offset, page := Paginate(c)
 			assert.Equal(t, tt.expectedLimit, limit)
 			assert.Equal(t, tt.expectedOffset, offset)
+			assert.Equal(t, tt.expectedPage, page)
 		})
 	}
 }

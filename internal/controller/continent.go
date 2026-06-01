@@ -19,16 +19,23 @@ type ContinentController struct {
 func (d ContinentController) Get(c *gin.Context) {
 	slog.Info("func", "GetMany", slog.String("ip", c.ClientIP()))
 
-	limit, offset := util.Paginate(c)
+	limit, offset, page := util.Paginate(c)
 
 	rs, err := d.Service.GetMany(c.Request.Context(), limit, offset)
 	if err != nil {
 		slog.Error("failed to get continents", "ip", c.ClientIP(), "err", err)
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
+		writeError(c, http.StatusInternalServerError, "ERR_INTERNAL", "Something went wrong")
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, rs)
+	total, err := d.Service.Count(c.Request.Context())
+	if err != nil {
+		slog.Error("failed to count continents", "ip", c.ClientIP(), "err", err)
+		writeError(c, http.StatusInternalServerError, "ERR_INTERNAL", "Something went wrong")
+		return
+	}
+
+	c.JSON(http.StatusOK, NewListResponse(rs, page, limit, total))
 }
 
 func (d ContinentController) GetOne(c *gin.Context) {
@@ -37,12 +44,12 @@ func (d ContinentController) GetOne(c *gin.Context) {
 	rs, err := d.Service.GetContinentByCode(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Continent not found"})
+			writeError(c, http.StatusNotFound, "ERR_NOT_FOUND", "Continent not found")
 			return
 		}
 		slog.Error("failed to get continent by code", "code", id, "ip", c.ClientIP(), "err", err)
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
+		writeError(c, http.StatusInternalServerError, "ERR_INTERNAL", "Something went wrong")
 		return
 	}
-	c.IndentedJSON(http.StatusOK, rs)
+	c.JSON(http.StatusOK, rs)
 }

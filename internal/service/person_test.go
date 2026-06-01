@@ -52,6 +52,20 @@ func TestPersonService_GetPersonById(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
+func TestPersonService_Count(t *testing.T) {
+	mockRepo := new(testutil.MockPersonRepository)
+	svc := &PersonService{Repo: mockRepo}
+
+	ctx := context.Background()
+	mockRepo.On("Count", ctx).Return(42, nil)
+
+	result, err := svc.Count(ctx)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 42, result)
+	mockRepo.AssertExpectations(t)
+}
+
 func TestPersonService_QueueCreate(t *testing.T) {
 	updateChan := make(chan UpdatePerson, 1)
 	svc := &PersonService{UpdatePersonChan: updateChan}

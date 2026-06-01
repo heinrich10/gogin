@@ -15,6 +15,7 @@ type UpdatePerson struct {
 type PersonServiceInterface interface {
 	GetMany(ctx context.Context, limit, offset int) ([]model.Person, error)
 	GetPersonById(ctx context.Context, id string) (model.Person, error)
+	Count(ctx context.Context) (int, error)
 	QueueCreate(person model.Person)
 	StartWorker(ctx context.Context, wg *sync.WaitGroup)
 }
@@ -31,6 +32,10 @@ func (s *PersonService) GetMany(ctx context.Context, limit, offset int) ([]model
 
 func (s *PersonService) GetPersonById(ctx context.Context, id string) (model.Person, error) {
 	return s.Repo.GetPersonById(ctx, id)
+}
+
+func (s *PersonService) Count(ctx context.Context) (int, error) {
+	return s.Repo.Count(ctx)
 }
 
 func (s *PersonService) QueueCreate(person model.Person) {

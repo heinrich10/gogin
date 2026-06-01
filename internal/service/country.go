@@ -9,6 +9,7 @@ import (
 type CountryServiceInterface interface {
 	GetMany(ctx context.Context, limit, offset int) ([]model.Country, error)
 	GetCountryByCode(ctx context.Context, code string) (model.Country, error)
+	Count(ctx context.Context) (int, error)
 }
 
 type CountryService struct {
@@ -21,4 +22,8 @@ func (s *CountryService) GetMany(ctx context.Context, limit, offset int) ([]mode
 
 func (s *CountryService) GetCountryByCode(ctx context.Context, code string) (model.Country, error) {
 	return s.Repo.GetCountryByCode(ctx, code)
+}
+
+func (s *CountryService) Count(ctx context.Context) (int, error) {
+	return s.Repo.Count(ctx)
 }

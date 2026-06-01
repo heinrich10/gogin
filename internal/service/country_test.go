@@ -48,3 +48,17 @@ func TestCountryService_GetCountryByCode(t *testing.T) {
 
 	mockRepo.AssertExpectations(t)
 }
+
+func TestCountryService_Count(t *testing.T) {
+	mockRepo := new(testutil.MockCountryRepository)
+	svc := &CountryService{Repo: mockRepo}
+
+	ctx := context.Background()
+	mockRepo.On("Count", ctx).Return(250, nil)
+
+	result, err := svc.Count(ctx)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 250, result)
+	mockRepo.AssertExpectations(t)
+}
