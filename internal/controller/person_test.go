@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"gogin/internal/model"
 	"gogin/internal/service"
+	"gogin/internal/testutil"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -21,7 +22,7 @@ func TestPersonController_Get(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("Success", func(t *testing.T) {
-		mockService := new(service.MockPersonService)
+		mockService := new(testutil.MockPersonService)
 		ctrl := PersonController{Service: mockService}
 
 		persons := []model.Person{
@@ -49,7 +50,7 @@ func TestPersonController_GetOne(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("Success", func(t *testing.T) {
-		mockService := new(service.MockPersonService)
+		mockService := new(testutil.MockPersonService)
 		ctrl := PersonController{Service: mockService}
 
 		person := model.Person{Id: 1, FirstName: "John", LastName: "Doe"}
@@ -71,7 +72,7 @@ func TestPersonController_GetOne(t *testing.T) {
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
-		mockService := new(service.MockPersonService)
+		mockService := new(testutil.MockPersonService)
 		ctrl := PersonController{Service: mockService}
 
 		mockService.On("GetPersonById", mock.Anything, "99").Return(model.Person{}, sql.ErrNoRows)
@@ -92,7 +93,7 @@ func TestPersonController_Create(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("Success", func(t *testing.T) {
-		mockService := new(service.MockPersonService)
+		mockService := new(testutil.MockPersonService)
 		ctrl := PersonController{Service: mockService}
 
 		person := model.Person{FirstName: "John", LastName: "Doe", CountryCode: "US"}
@@ -158,7 +159,7 @@ func TestPersonController_Create(t *testing.T) {
 }
 
 func TestPersonController_StartWorker(t *testing.T) {
-	mockRepo := new(service.MockPersonRepository)
+	mockRepo := new(testutil.MockPersonRepository)
 	updateChan := make(chan service.UpdatePerson, 1) // Buffered to avoid blocking
 	personService := service.PersonService{
 		Repo:             mockRepo,

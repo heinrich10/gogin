@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"gogin/internal/model"
-	"gogin/internal/service"
+	"gogin/internal/testutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -19,7 +19,7 @@ func TestContinentController_Get(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("Success", func(t *testing.T) {
-		mockService := new(service.MockContinentService)
+		mockService := new(testutil.MockContinentService)
 		ctrl := ContinentController{Service: mockService}
 
 		continents := []model.Continent{
@@ -44,7 +44,7 @@ func TestContinentController_Get(t *testing.T) {
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		mockService := new(service.MockContinentService)
+		mockService := new(testutil.MockContinentService)
 		ctrl := ContinentController{Service: mockService}
 
 		mockService.On("GetMany", mock.Anything, 10, 0).Return([]model.Continent{}, errors.New("db error"))
@@ -64,7 +64,7 @@ func TestContinentController_GetOne(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("Success", func(t *testing.T) {
-		mockService := new(service.MockContinentService)
+		mockService := new(testutil.MockContinentService)
 		ctrl := ContinentController{Service: mockService}
 
 		continent := model.Continent{Code: "AF", Name: "Africa"}
@@ -86,7 +86,7 @@ func TestContinentController_GetOne(t *testing.T) {
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
-		mockService := new(service.MockContinentService)
+		mockService := new(testutil.MockContinentService)
 		ctrl := ContinentController{Service: mockService}
 
 		mockService.On("GetContinentByCode", mock.Anything, "XX").Return(model.Continent{}, sql.ErrNoRows)
@@ -103,7 +103,7 @@ func TestContinentController_GetOne(t *testing.T) {
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		mockService := new(service.MockContinentService)
+		mockService := new(testutil.MockContinentService)
 		ctrl := ContinentController{Service: mockService}
 
 		mockService.On("GetContinentByCode", mock.Anything, "AF").Return(model.Continent{}, errors.New("db error"))

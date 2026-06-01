@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"gogin/internal/model"
+	"gogin/internal/testutil"
 	"sync"
 	"testing"
 	"time"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestPersonService_GetMany(t *testing.T) {
-	mockRepo := new(MockPersonRepository)
+	mockRepo := new(testutil.MockPersonRepository)
 	svc := &PersonService{Repo: mockRepo}
 
 	ctx := context.Background()
@@ -28,7 +29,7 @@ func TestPersonService_GetMany(t *testing.T) {
 }
 
 func TestPersonService_GetPersonById(t *testing.T) {
-	mockRepo := new(MockPersonRepository)
+	mockRepo := new(testutil.MockPersonRepository)
 	svc := &PersonService{Repo: mockRepo}
 
 	ctx := context.Background()
@@ -67,7 +68,7 @@ func TestPersonService_QueueCreate(t *testing.T) {
 }
 
 func TestPersonService_StartWorker(t *testing.T) {
-	mockRepo := new(MockPersonRepository)
+	mockRepo := new(testutil.MockPersonRepository)
 	updateChan := make(chan UpdatePerson, 5)
 
 	// Use a cancelable context for the worker itself
@@ -109,7 +110,7 @@ func TestPersonService_StartWorker(t *testing.T) {
 }
 
 func TestPersonService_StartWorker_CloseChannel(t *testing.T) {
-	mockRepo := new(MockPersonRepository)
+	mockRepo := new(testutil.MockPersonRepository)
 	updateChan := make(chan UpdatePerson, 1)
 	svc := &PersonService{
 		Repo:             mockRepo,

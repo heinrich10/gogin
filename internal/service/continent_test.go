@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"gogin/internal/model"
+	"gogin/internal/testutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestContinentService_GetMany(t *testing.T) {
-	mockRepo := new(MockContinentRepository)
+	mockRepo := new(testutil.MockContinentRepository)
 	svc := &ContinentService{Repo: mockRepo}
 
 	ctx := context.Background()
@@ -25,7 +26,7 @@ func TestContinentService_GetMany(t *testing.T) {
 }
 
 func TestContinentService_GetContinentByCode(t *testing.T) {
-	mockRepo := new(MockContinentRepository)
+	mockRepo := new(testutil.MockContinentRepository)
 	svc := &ContinentService{Repo: mockRepo}
 
 	ctx := context.Background()

@@ -73,7 +73,7 @@ func (s *PersonService) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 				slog.Info("func", "StartWorker", "Channel closed, worker stopping.")
 				return
 			}
-			s.processTask(context.Background(), task)
+			s.processTask(ctx, task)
 		}
 	}
 }
