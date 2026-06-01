@@ -1,11 +1,11 @@
 package controller
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"gogin/internal/model"
+	"gogin/internal/testutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,34 +15,19 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockContinentRepository is a mock for ContinentRepositoryInterface
-type MockContinentRepository struct {
-	mock.Mock
-}
-
-func (m *MockContinentRepository) GetContinentByCode(ctx context.Context, code string) (model.Continent, error) {
-	args := m.Called(ctx, code)
-	return args.Get(0).(model.Continent), args.Error(1)
-}
-
-func (m *MockContinentRepository) GetMany(ctx context.Context, limit, offset int) ([]model.Continent, error) {
-	args := m.Called(ctx, limit, offset)
-	return args.Get(0).([]model.Continent), args.Error(1)
-}
-
 func TestContinentController_Get(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("Success", func(t *testing.T) {
-		mockRepo := new(MockContinentRepository)
-		ctrl := ContinentController{Repository: mockRepo}
+		mockService := new(testutil.MockContinentService)
+		ctrl := ContinentController{Service: mockService}
 
 		continents := []model.Continent{
 			{Code: "AF", Name: "Africa"},
 			{Code: "AN", Name: "Antarctica"},
 		}
 
-		mockRepo.On("GetMany", mock.Anything, 10, 0).Return(continents, nil)
+		mockService.On("GetMany", mock.Anything, 10, 0).Return(continents, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -55,14 +40,14 @@ func TestContinentController_Get(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Equal(t, continents, response)
-		mockRepo.AssertExpectations(t)
+		mockService.AssertExpectations(t)
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		mockRepo := new(MockContinentRepository)
-		ctrl := ContinentController{Repository: mockRepo}
+		mockService := new(testutil.MockContinentService)
+		ctrl := ContinentController{Service: mockService}
 
-		mockRepo.On("GetMany", mock.Anything, 10, 0).Return([]model.Continent{}, errors.New("db error"))
+		mockService.On("GetMany", mock.Anything, 10, 0).Return([]model.Continent{}, errors.New("db error"))
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -71,7 +56,7 @@ func TestContinentController_Get(t *testing.T) {
 		ctrl.Get(c)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
-		mockRepo.AssertExpectations(t)
+		mockService.AssertExpectations(t)
 	})
 }
 
@@ -79,11 +64,11 @@ func TestContinentController_GetOne(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("Success", func(t *testing.T) {
-		mockRepo := new(MockContinentRepository)
-		ctrl := ContinentController{Repository: mockRepo}
+		mockService := new(testutil.MockContinentService)
+		ctrl := ContinentController{Service: mockService}
 
 		continent := model.Continent{Code: "AF", Name: "Africa"}
-		mockRepo.On("GetContinentByCode", mock.Anything, "AF").Return(continent, nil)
+		mockService.On("GetContinentByCode", mock.Anything, "AF").Return(continent, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -97,14 +82,14 @@ func TestContinentController_GetOne(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Equal(t, continent, response)
-		mockRepo.AssertExpectations(t)
+		mockService.AssertExpectations(t)
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
-		mockRepo := new(MockContinentRepository)
-		ctrl := ContinentController{Repository: mockRepo}
+		mockService := new(testutil.MockContinentService)
+		ctrl := ContinentController{Service: mockService}
 
-		mockRepo.On("GetContinentByCode", mock.Anything, "XX").Return(model.Continent{}, sql.ErrNoRows)
+		mockService.On("GetContinentByCode", mock.Anything, "XX").Return(model.Continent{}, sql.ErrNoRows)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -114,14 +99,14 @@ func TestContinentController_GetOne(t *testing.T) {
 		ctrl.GetOne(c)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
-		mockRepo.AssertExpectations(t)
+		mockService.AssertExpectations(t)
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		mockRepo := new(MockContinentRepository)
-		ctrl := ContinentController{Repository: mockRepo}
+		mockService := new(testutil.MockContinentService)
+		ctrl := ContinentController{Service: mockService}
 
-		mockRepo.On("GetContinentByCode", mock.Anything, "AF").Return(model.Continent{}, errors.New("db error"))
+		mockService.On("GetContinentByCode", mock.Anything, "AF").Return(model.Continent{}, errors.New("db error"))
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -131,6 +116,6 @@ func TestContinentController_GetOne(t *testing.T) {
 		ctrl.GetOne(c)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
-		mockRepo.AssertExpectations(t)
+		mockService.AssertExpectations(t)
 	})
 }

@@ -3,8 +3,18 @@
 Sample API server built with Go and Gin framework.
 
 ## Technologies
-- Go
-- SQLite
+- Go (1.25+)
+- Gin (HTTP Framework)
+- SQLite (Database)
+- Goose (Migrations)
+- Log/slog (Structured Logging)
+
+## Architecture
+The project follows a clean, layered architecture to separate concerns and ensure testability:
+- **Controllers**: Handle HTTP requests, input binding, and validation.
+- **Services**: Contain business logic and orchestrate operations between repositories.
+- **Repositories**: Encapsulate data access logic and SQL queries.
+- **Models**: Plain Go structs representing the domain entities.
 
 ## Prerequisites
 - Go 1.25+ installed
@@ -45,12 +55,19 @@ go test ./...
 ``` 
 
 ## Project layout
-- `go.mod` - Go modules
-- `build/` - build scripts like `Dockerfile`
-- `cmd/` - application entry points (e.g., `cmd/app/main.go`)
-- `configs` - configuration files
+- `cmd/` - application entry points
 - `internal/` - internal packages
-- `migrations/` - SQL migration files
+    - `app/` - application wiring and router setup
+    - `config/` - configuration management
+    - `controller/` - HTTP handlers
+    - `service/` - business logic (Service/Usecase layer)
+    - `repository/` - data access layer
+    - `model/` - domain models
+    - `lib/` - shared libraries (DB connection, migrations)
+    - `util/` - utility functions
+- `migrations/` - SQL migration files (goose format)
+- `test/` - integration tests
+- `AGENTS.md` - detailed agent-specific architecture and conventions guide
 
 ## Data Model
 

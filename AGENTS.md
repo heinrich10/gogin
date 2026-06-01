@@ -5,11 +5,11 @@
 - Prefer code as source of truth if docs ever conflict.
 
 ## Big picture architecture
-- App is a single Gin HTTP service with layered structure: `cmd/main.go` calls `internal/app.NewRouter(db)` to wire `controller` -> `repository` -> SQLite (`internal/lib/db.go`).
-- Domain split is by resource: `continent`, `country`, `person` in `internal/{controller,repository,model}`.
-- Controllers depend on repository interfaces (`internal/controller/*.go`), enabling mock-based unit tests.
+- App is a single Gin HTTP service with layered structure: `cmd/main.go` calls `internal/app.NewRouter(db)` to wire `controller` -> `service` -> `repository` -> SQLite (`internal/lib/db.go`).
+- Domain split is by resource: `continent`, `country`, `person` in `internal/{controller,service,repository,model}`.
+- Controllers depend on service interfaces (`internal/controller/*.go`); services depend on repository interfaces (`internal/service/*.go`). This enables mock-based unit tests at each layer.
 - Repository layer uses `database/sql` with SQLite driver `modernc.org/sqlite` and positional `?` placeholders.
-- `person` writes are asynchronous: `POST /persons` enqueues to `UpdatePersonChan`; `PersonController.StartWorker()` performs DB insert.
+- `person` writes are asynchronous: `POST /persons` enqueues to `UpdatePersonChan` via `PersonService`; `PersonService.StartWorker()` performs DB insert.
 
 ## Request/data flow patterns
 - List endpoints (`GET /continents`, `/countries`, `/persons`) always call `util.Paginate(c)` and pass `(limit, offset)` to `GetMany`.
@@ -31,8 +31,9 @@
 - Apply migrations: `go run ./cmd/migrate/main.go up` (native Go, no Docker required).
 
 ## Project-specific coding/testing conventions
-- Add repository interfaces first, then wire concrete structs in `internal/app/app.go`; controllers should depend on interfaces, not concrete DB structs.
-- Controller tests use Gin test context + `testify/mock` repository doubles (see `internal/controller/person_test.go`).
+- Add repository and service interfaces first, then wire concrete structs in `internal/app/app.go`; controllers should depend on service interfaces, and services on repository interfaces.
+- Controller tests use Gin test context + `testify/mock` service doubles (see `internal/controller/person_test.go`).
+- Service tests use `testify/mock` repository doubles (see `internal/service/person_test.go`).
 - Repository tests use `DATA-DOG/go-sqlmock` with explicit SQL expectation strings (see `internal/repository/*_test.go`).
 - API integration tests use `httptest` with the real `app.NewRouter(db)` against a temp-file SQLite DB running goose migrations (see `test/api_test.go`).
 - Pagination contract: default `limit=10`, `page=1`, max limit `100`; invalid/negative query values fall back to defaults (`internal/util/pagination.go`).
@@ -41,7 +42,8 @@
 ## Change checklist for new endpoints/features
 - Add/extend model in `internal/model`.
 - Add repository interface method + SQL implementation + sqlmock tests.
-- Add controller handler using existing error/response conventions + mock-based controller tests.
+- Add service interface method + implementation + repository-mock tests.
+- Add controller handler using existing error/response conventions + service-mock controller tests.
 - Wire route in `internal/app/app.go`; if async behavior is needed, follow the person channel/worker pattern.
 - Update migrations and, when schema changes, refresh `schema.sql` snapshot.
 

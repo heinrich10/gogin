@@ -1,81 +1,19 @@
 package controller
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"gogin/internal/model"
-	"gogin/internal/repository"
+	"gogin/internal/service"
 	"gogin/internal/util"
 	"log/slog"
 	"net/http"
-	"sync"
 
 	"github.com/gin-gonic/gin"
 )
 
-type UpdatePerson struct {
-	Person model.Person
-}
 type PersonController struct {
-	Repository       repository.PersonRepositoryInterface
-	UpdatePersonChan chan UpdatePerson
-	// ShutdownCtx is used for graceful draining of the worker.
-	ShutdownCtx context.Context
-}
-
-func (d *PersonController) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
-	if wg != nil {
-		defer wg.Done()
-	}
-	slog.Info("func", "StartPersonWorker", "Starting person worker...")
-
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			slog.Info("func", "StartWorker", "Context cancelled, draining channel...")
-			drainCtx := d.ShutdownCtx
-			if drainCtx == nil {
-				drainCtx = context.Background()
-			}
-			for {
-				select {
-				case task, ok := <-d.UpdatePersonChan:
-					if !ok {
-						slog.Info("func", "StartWorker", "Worker finished draining.")
-						return
-					}
-					d.processTask(drainCtx, task)
-				default:
-					slog.Info("func", "StartWorker", "Worker finished draining (no more tasks).")
-					return
-				}
-			}
-		case task, ok := <-d.UpdatePersonChan:
-			if !ok {
-				slog.Info("func", "StartWorker", "Channel closed, worker stopping.")
-				return
-			}
-			// Use context.Background() normally, or a context that is not cancelled.
-			// The original issue was that writes were using context.Background() ALWAYS.
-			// Wait, the issue says: "The worker still creates database writes with context.Background(), so these inserts cannot be canceled or bounded during server shutdown."
-			// So it WANTED them to be bounded!
-			d.processTask(context.Background(), task)
-		}
-	}
-}
-
-func (d *PersonController) processTask(ctx context.Context, task UpdatePerson) {
-	slog.Info("func", "processTask", slog.String("processing", task.Person.FirstName))
-	if err := d.Repository.Create(ctx, task.Person); err != nil {
-		slog.Error("func", "processTask", err)
-	} else {
-		slog.Info("func", "processTask", slog.String("created", task.Person.FirstName))
-	}
+	Service service.PersonServiceInterface
 }
 
 func (d *PersonController) Get(c *gin.Context) {
@@ -83,7 +21,7 @@ func (d *PersonController) Get(c *gin.Context) {
 
 	limit, offset := util.Paginate(c)
 
-	rs, err := d.Repository.GetMany(c.Request.Context(), limit, offset)
+	rs, err := d.Service.GetMany(c.Request.Context(), limit, offset)
 	if err != nil {
 		slog.Error("failed to get persons", "ip", c.ClientIP(), "err", err)
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Something went wrong"})
@@ -96,7 +34,7 @@ func (d *PersonController) Get(c *gin.Context) {
 func (d *PersonController) GetOne(c *gin.Context) {
 	slog.Info("func", "Get", slog.String("ip", c.ClientIP()))
 	id := c.Param("id")
-	rs, err := d.Repository.GetPersonById(c.Request.Context(), id)
+	rs, err := d.Service.GetPersonById(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Person not found"})
@@ -119,6 +57,6 @@ func (d *PersonController) Create(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid request body or validation failed: " + err.Error()})
 		return
 	}
-	d.UpdatePersonChan <- UpdatePerson{Person: body}
+	d.Service.QueueCreate(body)
 	c.IndentedJSON(http.StatusAccepted, gin.H{"status": "queued"})
 }
