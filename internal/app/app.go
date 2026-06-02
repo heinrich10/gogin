@@ -73,19 +73,19 @@ func NewRouter(ctx context.Context, shutdownCtx context.Context, wg *sync.WaitGr
 
 	{
 		continentGroup := router.Group("/continents")
-		continentGroup.GET("/", continentController.Get)
+		continentGroup.GET("", continentController.Get)
 		continentGroup.GET("/:code", continentController.GetOne)
 	}
 	{
 		countryGroup := router.Group("/countries")
-		countryGroup.GET("/", countryController.Get)
+		countryGroup.GET("", countryController.Get)
 		countryGroup.GET("/:code", countryController.GetOne)
 	}
 	{
 		personGroup := router.Group("/persons")
-		personGroup.GET("/", personController.Get)
+		personGroup.GET("", personController.Get)
 		personGroup.GET("/:id", personController.GetOne)
-		personGroup.POST("/", personController.Create)
+		personGroup.POST("", personController.Create)
 	}
 
 	return router, updatePersonChan

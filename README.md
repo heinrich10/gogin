@@ -49,10 +49,19 @@ docker build -f build/Dockerfile -t gogin .
 ``` 
 
 ## Testing
+
+### Go tests
 To run tests, use:
 ```bash
 go test ./...
-``` 
+```
+
+### JetBrains HTTP Client
+The `test/http/` directory contains [JetBrains HTTP Client](https://www.jetbrains.com/help/idea/http-client-in-product-code-editor.html) files for manual API exploration:
+- `test/http/api.http` — requests for all endpoints (continents, countries, persons)
+- `test/http/http-client.env.json` — environment variables (`baseUrl`)
+
+Open `api.http` in any JetBrains IDE and click the green play icon next to a request to execute it. 
 
 ## Project layout
 - `cmd/` - application entry points
@@ -67,6 +76,7 @@ go test ./...
     - `util/` - utility functions
 - `migrations/` - SQL migration files (goose format)
 - `test/` - integration tests
+    - `http/` - JetBrains HTTP Client files for manual API testing
 - `AGENTS.md` - detailed agent-specific architecture and conventions guide
 
 ## Data Model

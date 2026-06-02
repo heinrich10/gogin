@@ -1,0 +1,54 @@
+### List all continents
+GET {{baseUrl}}/continents
+Accept: application/json
+
+### List continents with pagination
+GET {{baseUrl}}/continents?page=1&limit=5
+Accept: application/json
+
+### Get a single continent
+GET {{baseUrl}}/continents/NA
+Accept: application/json
+
+### List all countries
+GET {{baseUrl}}/countries
+Accept: application/json
+
+### List countries with pagination
+GET {{baseUrl}}/countries?page=1&limit=10
+Accept: application/json
+
+### Get a single country
+GET {{baseUrl}}/countries/US
+Accept: application/json
+
+### List all persons
+GET {{baseUrl}}/persons
+Accept: application/json
+
+### List persons with pagination
+GET {{baseUrl}}/persons?page=1&limit=5
+Accept: application/json
+
+### Get a single person
+GET {{baseUrl}}/persons/1
+Accept: application/json
+
+### Create a person
+POST {{baseUrl}}/persons
+Content-Type: application/json
+
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "country_code": "US"
+}
+
+### Create a person (invalid - missing required fields)
+POST {{baseUrl}}/persons
+Content-Type: application/json
+
+{
+  "last_name": "Doe",
+  "country_code": "US"
+}
