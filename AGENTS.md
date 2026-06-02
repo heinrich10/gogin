@@ -29,6 +29,7 @@
 - Run service from repo root: `go run ./cmd/main.go`.
 - Build binary: `go build -o main ./cmd/main.go`.
 - Apply migrations: `go run ./cmd/migrate/main.go up` (native Go, no Docker required).
+- Manual API testing: open `test/http/api.http` in a JetBrains IDE to execute requests against the running server.
 
 ## Project-specific coding/testing conventions
 - Add repository and service interfaces first, then wire concrete structs in `internal/app/app.go`; controllers should depend on service interfaces, and services on repository interfaces.
