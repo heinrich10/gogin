@@ -22,6 +22,11 @@ func (m *MockContinentService) GetContinentByCode(ctx context.Context, code stri
 	return args.Get(0).(model.Continent), args.Error(1)
 }
 
+func (m *MockContinentService) Count(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
+}
+
 type MockCountryService struct {
 	mock.Mock
 }
@@ -36,6 +41,11 @@ func (m *MockCountryService) GetCountryByCode(ctx context.Context, code string) 
 	return args.Get(0).(model.Country), args.Error(1)
 }
 
+func (m *MockCountryService) Count(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
+}
+
 type MockPersonService struct {
 	mock.Mock
 }
@@ -48,6 +58,11 @@ func (m *MockPersonService) GetMany(ctx context.Context, limit, offset int) ([]m
 func (m *MockPersonService) GetPersonById(ctx context.Context, id string) (model.Person, error) {
 	args := m.Called(ctx, id)
 	return args.Get(0).(model.Person), args.Error(1)
+}
+
+func (m *MockPersonService) Count(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
 }
 
 func (m *MockPersonService) QueueCreate(person model.Person) {
@@ -72,6 +87,11 @@ func (m *MockContinentRepository) GetMany(ctx context.Context, limit, offset int
 	return args.Get(0).([]model.Continent), args.Error(1)
 }
 
+func (m *MockContinentRepository) Count(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
+}
+
 type MockCountryRepository struct {
 	mock.Mock
 }
@@ -84,6 +104,11 @@ func (m *MockCountryRepository) GetCountryByCode(ctx context.Context, code strin
 func (m *MockCountryRepository) GetMany(ctx context.Context, limit, offset int) ([]model.Country, error) {
 	args := m.Called(ctx, limit, offset)
 	return args.Get(0).([]model.Country), args.Error(1)
+}
+
+func (m *MockCountryRepository) Count(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
 }
 
 type MockPersonRepository struct {
@@ -103,4 +128,9 @@ func (m *MockPersonRepository) GetMany(ctx context.Context, limit, offset int) (
 func (m *MockPersonRepository) Create(ctx context.Context, body model.Person) error {
 	args := m.Called(ctx, body)
 	return args.Error(0)
+}
+
+func (m *MockPersonRepository) Count(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
 }

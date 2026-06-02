@@ -63,3 +63,24 @@ func TestCountryRepository_GetMany(t *testing.T) {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
+
+func TestCountryRepository_Count(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	repo := CountryRepository{Db: db}
+
+	rows := sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(250)
+	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM country").WillReturnRows(rows)
+
+	res, err := repo.Count(t.Context())
+	assert.NoError(t, err)
+	assert.Equal(t, 250, res)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}

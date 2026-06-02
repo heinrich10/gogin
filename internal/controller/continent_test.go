@@ -28,6 +28,7 @@ func TestContinentController_Get(t *testing.T) {
 		}
 
 		mockService.On("GetMany", mock.Anything, 10, 0).Return(continents, nil)
+		mockService.On("Count", mock.Anything).Return(7, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -36,10 +37,13 @@ func TestContinentController_Get(t *testing.T) {
 		ctrl.Get(c)
 
 		assert.Equal(t, http.StatusOK, w.Code)
-		var response []model.Continent
+		var response ListResponse[model.Continent]
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
-		assert.Equal(t, continents, response)
+		assert.Equal(t, continents, response.Data)
+		assert.Equal(t, 1, response.Meta.Page)
+		assert.Equal(t, 10, response.Meta.Limit)
+		assert.Equal(t, 7, response.Meta.Total)
 		mockService.AssertExpectations(t)
 	})
 
@@ -56,6 +60,10 @@ func TestContinentController_Get(t *testing.T) {
 		ctrl.Get(c)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		var response ErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "ERR_INTERNAL", response.Error.Code)
 		mockService.AssertExpectations(t)
 	})
 }
@@ -99,6 +107,11 @@ func TestContinentController_GetOne(t *testing.T) {
 		ctrl.GetOne(c)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
+		var response ErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "ERR_NOT_FOUND", response.Error.Code)
+		assert.Equal(t, "Continent not found", response.Error.Message)
 		mockService.AssertExpectations(t)
 	})
 
@@ -116,6 +129,10 @@ func TestContinentController_GetOne(t *testing.T) {
 		ctrl.GetOne(c)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		var response ErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "ERR_INTERNAL", response.Error.Code)
 		mockService.AssertExpectations(t)
 	})
 }

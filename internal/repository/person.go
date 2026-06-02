@@ -11,6 +11,7 @@ type PersonRepositoryInterface interface {
 	GetPersonById(ctx context.Context, id string) (model.Person, error)
 	GetMany(ctx context.Context, limit, offset int) ([]model.Person, error)
 	Create(ctx context.Context, body model.Person) error
+	Count(ctx context.Context) (int, error)
 }
 
 type PersonRepository struct {
@@ -41,7 +42,7 @@ func (r PersonRepository) GetMany(ctx context.Context, limit, offset int) ([]mod
 	defer func(rows *sql.Rows) {
 		if closeErr := rows.Close(); closeErr != nil {
 
-			slog.Error("GetMany", "error", err)
+			slog.Error("GetMany", "error", closeErr)
 		}
 	}(rows)
 
@@ -69,4 +70,12 @@ func (r PersonRepository) Create(ctx context.Context, body model.Person) error {
 		body.FirstName, body.LastName, body.CountryCode,
 	)
 	return err
+}
+
+func (r PersonRepository) Count(ctx context.Context) (int, error) {
+	var count int
+	if err := r.Db.QueryRowContext(ctx, "SELECT COUNT(*) FROM person").Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
 }

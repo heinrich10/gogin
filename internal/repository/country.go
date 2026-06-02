@@ -10,6 +10,7 @@ import (
 type CountryRepositoryInterface interface {
 	GetCountryByCode(ctx context.Context, code string) (model.Country, error)
 	GetMany(ctx context.Context, limit, offset int) ([]model.Country, error)
+	Count(ctx context.Context) (int, error)
 }
 
 type CountryRepository struct {
@@ -33,7 +34,7 @@ func (r CountryRepository) GetMany(ctx context.Context, limit, offset int) ([]mo
 
 	defer func(rows *sql.Rows) {
 		if closeErr := rows.Close(); closeErr != nil {
-			slog.Error("GetMany", "error", err)
+			slog.Error("GetMany", "error", closeErr)
 		}
 	}(rows)
 
@@ -51,4 +52,12 @@ func (r CountryRepository) GetMany(ctx context.Context, limit, offset int) ([]mo
 	}
 
 	return countries, nil
+}
+
+func (r CountryRepository) Count(ctx context.Context) (int, error) {
+	var count int
+	if err := r.Db.QueryRowContext(ctx, "SELECT COUNT(*) FROM country").Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
 }
