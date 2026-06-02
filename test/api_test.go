@@ -61,7 +61,7 @@ func TestAPI(t *testing.T) {
 	t.Run("continents", func(t *testing.T) {
 		t.Run("list default pagination", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodGet, "/continents/", nil)
+			req, _ := http.NewRequest(http.MethodGet, "/continents", nil)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -84,7 +84,7 @@ func TestAPI(t *testing.T) {
 
 		t.Run("list with limit", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodGet, "/continents/?limit=3", nil)
+			req, _ := http.NewRequest(http.MethodGet, "/continents?limit=3", nil)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -110,7 +110,7 @@ func TestAPI(t *testing.T) {
 
 		t.Run("list with limit and page", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodGet, "/continents/?limit=3&page=2", nil)
+			req, _ := http.NewRequest(http.MethodGet, "/continents?limit=3&page=2", nil)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -134,7 +134,7 @@ func TestAPI(t *testing.T) {
 
 		t.Run("list limit over max", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodGet, "/continents/?limit=200", nil)
+			req, _ := http.NewRequest(http.MethodGet, "/continents?limit=200", nil)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -185,7 +185,7 @@ func TestAPI(t *testing.T) {
 	t.Run("countries", func(t *testing.T) {
 		t.Run("list default pagination", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodGet, "/countries/", nil)
+			req, _ := http.NewRequest(http.MethodGet, "/countries", nil)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -207,7 +207,7 @@ func TestAPI(t *testing.T) {
 
 		t.Run("list with pagination", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodGet, "/countries/?limit=2&page=1", nil)
+			req, _ := http.NewRequest(http.MethodGet, "/countries?limit=2&page=1", nil)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -259,7 +259,7 @@ func TestAPI(t *testing.T) {
 	t.Run("persons read-only", func(t *testing.T) {
 		t.Run("list default pagination", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodGet, "/persons/", nil)
+			req, _ := http.NewRequest(http.MethodGet, "/persons", nil)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -280,7 +280,7 @@ func TestAPI(t *testing.T) {
 
 		t.Run("list with pagination", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodGet, "/persons/?limit=1&page=2", nil)
+			req, _ := http.NewRequest(http.MethodGet, "/persons?limit=1&page=2", nil)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -339,7 +339,7 @@ func TestAPI(t *testing.T) {
 			})
 
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodPost, "/persons/", bytes.NewReader(body))
+			req, _ := http.NewRequest(http.MethodPost, "/persons", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			router.ServeHTTP(w, req)
 
@@ -357,7 +357,7 @@ func TestAPI(t *testing.T) {
 			})
 
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodPost, "/persons/", bytes.NewReader(body))
+			req, _ := http.NewRequest(http.MethodPost, "/persons", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			router.ServeHTTP(w, req)
 			require.Equal(t, http.StatusAccepted, w.Code)
@@ -368,7 +368,7 @@ func TestAPI(t *testing.T) {
 
 			// After worker finishes, check the DB
 			w = httptest.NewRecorder()
-			req, _ = http.NewRequest(http.MethodGet, "/persons/?limit=100", nil)
+			req, _ = http.NewRequest(http.MethodGet, "/persons?limit=100", nil)
 			router.ServeHTTP(w, req)
 
 			var result struct {
@@ -393,7 +393,7 @@ func TestAPI(t *testing.T) {
 
 		t.Run("invalid json returns bad request", func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodPost, "/persons/", bytes.NewReader([]byte("not-json")))
+			req, _ := http.NewRequest(http.MethodPost, "/persons", bytes.NewReader([]byte("not-json")))
 			req.Header.Set("Content-Type", "application/json")
 			router.ServeHTTP(w, req)
 
@@ -415,7 +415,7 @@ func TestAPI(t *testing.T) {
 				CountryCode: "JP",
 			})
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodPost, "/persons/", bytes.NewReader(body))
+			req, _ := http.NewRequest(http.MethodPost, "/persons", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			router.ServeHTTP(w, req)
 
@@ -438,7 +438,7 @@ func TestAPI(t *testing.T) {
 				CountryCode: "USA",
 			})
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodPost, "/persons/", bytes.NewReader(body))
+			req, _ := http.NewRequest(http.MethodPost, "/persons", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			router.ServeHTTP(w, req)
 
