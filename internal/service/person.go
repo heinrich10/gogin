@@ -52,14 +52,15 @@ func (s *PersonService) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 		ctx = context.Background()
 	}
 
+	drainCtx := s.ShutdownCtx
+	if drainCtx == nil {
+		drainCtx = context.Background()
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
 			slog.Info("func", "StartWorker", "Context cancelled, draining channel...")
-			drainCtx := s.ShutdownCtx
-			if drainCtx == nil {
-				drainCtx = context.Background()
-			}
 			for {
 				select {
 				case task, ok := <-s.UpdatePersonChan:
@@ -78,7 +79,11 @@ func (s *PersonService) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 				slog.Info("func", "StartWorker", "Channel closed, worker stopping.")
 				return
 			}
-			s.processTask(ctx, task)
+			taskCtx := ctx
+			if ctx.Err() != nil {
+				taskCtx = drainCtx
+			}
+			s.processTask(taskCtx, task)
 		}
 	}
 }
