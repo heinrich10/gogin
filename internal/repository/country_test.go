@@ -18,10 +18,10 @@ func TestCountryRepository_GetCountryByCode(t *testing.T) {
 	code := "US"
 	name := "United States"
 
-	rows := sqlmock.NewRows([]string{"code", "name"}).
-		AddRow(code, name)
+	rows := sqlmock.NewRows([]string{"code", "name", "phone", "symbol", "capital", "currency", "continent_code", "alpha_3"}).
+		AddRow(code, name, "1", "$", "Washington", "USD", "NA", "USA")
 
-	mock.ExpectQuery("SELECT code, name FROM country WHERE code = ?").
+	mock.ExpectQuery("SELECT code, name, phone, symbol, capital, currency, continent_code, alpha_3 FROM country WHERE code = ?").
 		WithArgs(code).
 		WillReturnRows(rows)
 
@@ -45,11 +45,11 @@ func TestCountryRepository_GetMany(t *testing.T) {
 	repo := CountryRepository{Db: db}
 	limit, offset := 10, 0
 
-	rows := sqlmock.NewRows([]string{"code", "name"}).
-		AddRow("US", "United States").
-		AddRow("CA", "Canada")
+	rows := sqlmock.NewRows([]string{"code", "name", "phone", "symbol", "capital", "currency", "continent_code", "alpha_3"}).
+		AddRow("US", "United States", "1", "$", "Washington", "USD", "NA", "USA").
+		AddRow("CA", "Canada", "1", "$", "Ottawa", "CAD", "NA", "CAN")
 
-	mock.ExpectQuery("SELECT code, name FROM country ORDER BY code LIMIT \\? OFFSET \\?").
+	mock.ExpectQuery("SELECT code, name, phone, symbol, capital, currency, continent_code, alpha_3 FROM country ORDER BY code LIMIT \\? OFFSET \\?").
 		WithArgs(limit, offset).
 		WillReturnRows(rows)
 

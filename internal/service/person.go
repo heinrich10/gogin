@@ -89,10 +89,10 @@ func (s *PersonService) StartWorker(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func (s *PersonService) processTask(ctx context.Context, task UpdatePerson) {
-	slog.Info("func", "processTask", slog.String("processing", task.Person.FirstName))
+	slog.Info("func", "processTask", slog.String("status", "processing"))
 	if err := s.Repo.Create(ctx, task.Person); err != nil {
-		slog.Error("func", "processTask", err)
+		slog.Error("func", "processTask", slog.Any("err", err))
 	} else {
-		slog.Info("func", "processTask", slog.String("created", task.Person.FirstName))
+		slog.Info("func", "processTask", slog.String("status", "created"))
 	}
 }

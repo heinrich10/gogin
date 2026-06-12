@@ -19,15 +19,15 @@ type CountryRepository struct {
 
 func (r CountryRepository) GetCountryByCode(ctx context.Context, code string) (model.Country, error) {
 	var country model.Country
-	if err := r.Db.QueryRowContext(ctx, "SELECT code, name FROM country WHERE code = ?", code).
-		Scan(&country.Code, &country.Name); err != nil {
+	if err := r.Db.QueryRowContext(ctx, "SELECT code, name, phone, symbol, capital, currency, continent_code, alpha_3 FROM country WHERE code = ?", code).
+		Scan(&country.Code, &country.Name, &country.Phone, &country.Symbol, &country.Capital, &country.Currency, &country.ContinentCode, &country.Alpha3); err != nil {
 		return model.Country{}, err
 	}
 	return country, nil
 }
 
 func (r CountryRepository) GetMany(ctx context.Context, limit, offset int) ([]model.Country, error) {
-	rows, err := r.Db.QueryContext(ctx, "SELECT code, name FROM country ORDER BY code LIMIT ? OFFSET ?", limit, offset)
+	rows, err := r.Db.QueryContext(ctx, "SELECT code, name, phone, symbol, capital, currency, continent_code, alpha_3 FROM country ORDER BY code LIMIT ? OFFSET ?", limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (r CountryRepository) GetMany(ctx context.Context, limit, offset int) ([]mo
 	var countries []model.Country
 	for rows.Next() {
 		var country model.Country
-		if err := rows.Scan(&country.Code, &country.Name); err != nil {
+		if err := rows.Scan(&country.Code, &country.Name, &country.Phone, &country.Symbol, &country.Capital, &country.Currency, &country.ContinentCode, &country.Alpha3); err != nil {
 			return nil, err
 		}
 		countries = append(countries, country)

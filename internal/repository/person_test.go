@@ -45,11 +45,11 @@ func TestPersonRepository_GetMany(t *testing.T) {
 	repo := PersonRepository{Db: db}
 	limit, offset := 10, 0
 
-	rows := sqlmock.NewRows([]string{"id", "first_name", "last_name", "country_code"}).
-		AddRow(1, "John", "Doe", "US").
-		AddRow(2, "Jane", "Smith", "CA")
+	rows := sqlmock.NewRows([]string{"id", "first_name", "last_name", "country_code", "updated_at", "created_at"}).
+		AddRow(1, "John", "Doe", "US", "2023-01-01", "2023-01-01").
+		AddRow(2, "Jane", "Smith", "CA", "2023-01-01", "2023-01-01")
 
-	mock.ExpectQuery("SELECT id, first_name, last_name, country_code FROM person LIMIT \\? OFFSET \\?").
+	mock.ExpectQuery("SELECT id, first_name, last_name, country_code, updated_at, created_at FROM person LIMIT \\? OFFSET \\?").
 		WithArgs(limit, offset).
 		WillReturnRows(rows)
 
