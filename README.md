@@ -34,13 +34,13 @@ The project follows a clean, layered architecture to separate concerns and ensur
     ```
 5. Start the server:
     ```bash
-   go run cmd/main.go
+   go run cmd/server/main.go
    ```
 
 ## Building
 To build the application, run:
 ```bash
-go build -o main cmd/main.go
+go build -o main cmd/server/main.go
 ```
 
 To build docker image, run:
@@ -100,7 +100,7 @@ erDiagram
 	country {
 		String code PK ""  
 		String name  ""  
-		int phone  ""  
+		String phone  ""  
 		String symbol  ""  
 		String capital  ""  
 		String currency  ""  

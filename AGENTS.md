@@ -5,17 +5,19 @@
 - Prefer code as source of truth if docs ever conflict.
 
 ## Big picture architecture
-- App is a single Gin HTTP service with layered structure: `cmd/main.go` calls `internal/app.NewRouter(db)` to wire `controller` -> `service` -> `repository` -> SQLite (`internal/lib/db.go`).
+- App is a single Gin HTTP service with layered structure: `cmd/server/main.go` calls `internal/app.NewRouter(db)` to wire `controller` -> `service` -> `repository` -> SQLite (`internal/lib/db.go`).
 - Domain split is by resource: `continent`, `country`, `person` in `internal/{controller,service,repository,model}`.
 - Controllers depend on service interfaces (`internal/controller/*.go`); services depend on repository interfaces (`internal/service/*.go`). This enables mock-based unit tests at each layer.
 - Repository layer uses `database/sql` with SQLite driver `modernc.org/sqlite` and positional `?` placeholders.
 - `person` writes are asynchronous: `POST /persons` enqueues to `UpdatePersonChan` via `PersonService`; `PersonService.StartWorker()` performs DB insert.
 
 ## Request/data flow patterns
+- Router injects standard security headers (HSTS, CSP, X-Frame-Options, etc.) to all responses.
 - List endpoints (`GET /continents`, `/countries`, `/persons`) always call `util.Paginate(c)` and pass `(limit, offset)` to `GetMany`.
 - Single-resource endpoints map `sql.ErrNoRows` to `404`; other errors return `500` with `{"error":"Something went wrong"}`.
 - `POST /persons` returns `202 {"status":"queued"}` after JSON bind; malformed JSON returns `400`.
 - Logging uses `log/slog` in all layers with structured key/value pairs; follow existing key names like `"func"`, `"ip"`, `"err"`.
+- **Privacy:** Never log PII (Personally Identifiable Information) such as names or phone numbers.
 
 ## Config, DB, and migrations
 - Runtime config auto-loads from env via `godotenv/autoload` (`internal/config/config.go`); key vars: `DB_HOST`, `HOST`, `PORT`, `TRUSTED_PROXIES`.
@@ -25,7 +27,7 @@
 - Seed migration (`migrations/20260115134736_seed_data.sql`) inserts large country dataset + sample persons; keep new seeds idempotency expectations in mind.
 
 ## Developer workflows (verified)
-- Run tests: `go test ./...` (verified passing on 2026-05-03).
+- Run tests: `go test ./...` (verified passing on 2026-06-12).
 - Run service from repo root: `go run ./cmd/server/main.go`.
 - Build binary: `go build -o main ./cmd/server/main.go`.
 - Apply migrations: `go run ./cmd/migrate/main.go up` (native Go, no Docker required).
