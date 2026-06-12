@@ -33,7 +33,7 @@ func (r PersonRepository) GetPersonById(ctx context.Context, id string) (model.P
 
 func (r PersonRepository) GetMany(ctx context.Context, limit, offset int) ([]model.Person, error) {
 	rows, err := r.Db.QueryContext(ctx,
-		"SELECT id, first_name, last_name, country_code "+
+		"SELECT id, first_name, last_name, country_code, updated_at, created_at "+
 			"FROM person LIMIT ? OFFSET ?", limit, offset,
 	)
 	if err != nil {
@@ -49,7 +49,7 @@ func (r PersonRepository) GetMany(ctx context.Context, limit, offset int) ([]mod
 	var persons []model.Person
 	for rows.Next() {
 		var person model.Person
-		if err := rows.Scan(&person.Id, &person.FirstName, &person.LastName, &person.CountryCode); err != nil {
+		if err := rows.Scan(&person.Id, &person.FirstName, &person.LastName, &person.CountryCode, &person.UpdatedAt, &person.CreatedAt); err != nil {
 			return nil, err
 		}
 		persons = append(persons, person)
